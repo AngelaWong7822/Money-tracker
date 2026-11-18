@@ -83,6 +83,25 @@ function clean(a: Record<string, unknown>) {
     };
 }
 
+// 由 Google 攞模型清單，揀版本最新、支援 generateContent 嘅正式版 Flash
+let cachedModel: string | null = null;
+async function pickFlashModel(apiKey: string): Promise<string | null> {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {
+        headers: { 'x-goog-api-key': apiKey },
+    });
+    if (!res.ok) return null;
+    const { models = [] } = await res.json();
+    const version = (n: string) => Number(n.match(/gemini-(\d+(?:\.\d+)?)/)?.[1] ?? 0);
+    const names: string[] = models
+        .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+        .filter((n: string) => /^gemini-[\d.]+-flash(-\d+)?$/.test(n) || /^gemini-[\d.]+-flash-latest$/.test(n) || n === 'gemini-flash-latest');
+    names.sort((a, b) => version(b) - version(a));
+    cachedModel = names[0] ?? null;
+    console.log('Picked Gemini model', cachedModel, 'from', names.join(', '));
+    return cachedModel;
+}
+
 Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
     if (req.method !== 'POST') return json({ error: '只接受 POST' }, 405);
@@ -97,7 +116,7 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) return json({ error: '未設定 GEMINI_API_KEY' }, 500);
-    const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+    let model = Deno.env.get('GEMINI_MODEL') ?? cachedModel ?? 'gemini-2.5-flash';
 
     let body: { images?: { mimeType: string; data: string }[]; today?: string };
     try {
@@ -115,29 +134,43 @@ Deno.serve(async (req) => {
     }
     const today = isDate(body.today) ? body.today! : new Date().toISOString().slice(0, 10);
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    const requestBody = JSON.stringify({
+        contents: [{
+            role: 'user',
+            parts: [
+                { text: PROMPT(today) },
+                ...images.map((img) => ({ inline_data: { mime_type: img.mimeType, data: img.data } })),
+            ],
+        }],
+        generationConfig: {
+            temperature: 0,
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_SCHEMA,
+        },
+    });
+    const callGemini = (m: string) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-            contents: [{
-                role: 'user',
-                parts: [
-                    { text: PROMPT(today) },
-                    ...images.map((img) => ({ inline_data: { mime_type: img.mimeType, data: img.data } })),
-                ],
-            }],
-            generationConfig: {
-                temperature: 0,
-                responseMimeType: 'application/json',
-                responseSchema: RESPONSE_SCHEMA,
-            },
-        }),
+        body: requestBody,
     });
+
+    let geminiRes = await callGemini(model);
+    // 模型被 Google 停用咗（404）→ 自動揀最新嘅 Flash 模型再試一次
+    if (geminiRes.status === 404) {
+        await geminiRes.body?.cancel();
+        const fallback = await pickFlashModel(apiKey);
+        if (fallback && fallback !== model) {
+            model = fallback;
+            geminiRes = await callGemini(model);
+        }
+    }
 
     if (!geminiRes.ok) {
         const detail = await geminiRes.text();
-        console.error('Gemini error', geminiRes.status, detail.slice(0, 500));
-        return json({ error: `Gemini 出錯（${geminiRes.status}）` }, 502);
+        console.error('Gemini error', geminiRes.status, model, detail.slice(0, 500));
+        let reason = '';
+        try { reason = JSON.parse(detail)?.error?.message ?? ''; } catch { /* ignore */ }
+        return json({ error: `Gemini 出錯（${geminiRes.status}，${model}）${reason ? '：' + reason.slice(0, 200) : ''}` }, 502);
     }
 
     const result = await geminiRes.json();

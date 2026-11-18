@@ -82,8 +82,12 @@ function createCloudStore() {
             });
             if (error) {
                 let msg = error.message;
-                try { msg = (await error.context.json()).error || msg; } catch { /* 冇 JSON 就用原本訊息 */ }
-                if (/Failed to send|not found|404/i.test(msg)) msg = '搵唔到 invest-extract function，可能未部署';
+                let fromFunction = false;
+                try {
+                    const body = await error.context.json();
+                    if (body?.error) { msg = body.error; fromFunction = true; }
+                } catch { /* 冇 JSON 就用原本訊息 */ }
+                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '連唔到 invest-extract function，檢查下網絡或者 function 有冇部署';
                 throw new Error(msg);
             }
             return data.assets;
