@@ -83,3 +83,11 @@ const fmtMoney = (v, currency = 'HKD', digits = 0) => {
     return sign + sym + Math.abs(v).toLocaleString('en-HK', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 };
 const fmtPct = (v, digits = 1) => `${v.toFixed(digits)}%`;
+
+/** 美元金額嘅港幣參考：「≈ HK$9,376」；港幣金額就回空字串 */
+function hkdHint(v, currency, settings, signed = false) {
+    if (currency !== 'USD' || v === null || v === undefined) return '';
+    const h = toHKD(v, currency, settings);
+    const sign = signed && h > 0 ? '+' : '';
+    return `≈ ${sign}${fmtMoney(h).replace('$', 'HK$')}`;
+}

@@ -319,3 +319,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .check { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--text-primary); font-size: 0.85rem; font-weight: 500; flex: none; }
 .check input { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--brand); }
 .import-card .error { margin: -0.3rem 0 0.6rem; }
+
+/* 美元金額下面嘅港幣參考 */
+.hkd-hint { font-size: 0.72rem; color: var(--text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }

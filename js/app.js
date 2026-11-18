@@ -109,7 +109,7 @@ function renderOverview() {
             ${upcoming.length ? `<ul class="mini-list">${upcoming.map(({ a, days }) => `
                 <li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.institution ? a.institution + ' ' : '')}${esc(a.name)}</div>
-                        <div class="item-sub num">${fmtMoney(nativeValue(a), a.currency)} · 年息 ${a.rate ? Number(a.rate) + '%' : '—'}</div></div>
+                        <div class="item-sub num">${fmtMoney(nativeValue(a), a.currency)}${a.currency === 'USD' ? `（${hkdHint(nativeValue(a), a.currency, settings)}）` : ''} · 年息 ${a.rate ? Number(a.rate) + '%' : '—'}</div></div>
                     ${daysLeftBadge(days)}
                 </li>`).join('')}</ul>` : '<p class="muted small">暫時冇定期</p>'}
             ${next ? explain(`最快一筆係 ${esc(next.a.institution || '')} ${esc(next.a.name)}，${next.days === 0 ? '今日' : `${next.days} 日後`}到期。到期之後會自動續期定轉返活期，要睇你開定期嗰陣點揀，記得去銀行 app 確認。`) : ''}
@@ -123,13 +123,14 @@ function renderOverview() {
                     <div><div class="item-name">${esc(a.name)}</div>
                         <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股</div></div>
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, 2)}</div>
-                        ${pl ? `<div class="small ${pl.pnl >= 0 ? 'up' : 'down'}">${pl.pnl >= 0 ? '+' : ''}${fmtMoney(pl.pnl, a.currency, 2)}（${pl.pnl >= 0 ? '+' : ''}${fmtPct(pl.pct)}）</div>` : '<div class="small muted">未有現價</div>'}</div>
+                        ${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}
+                        ${pl ? `<div class="small ${pl.pnl >= 0 ? 'up' : 'down'}">${pl.pnl >= 0 ? '+' : ''}${fmtMoney(pl.pnl, a.currency, 2)}（${pl.pnl >= 0 ? '+' : ''}${fmtPct(pl.pct)}）</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(pl.pnl, a.currency, settings, true)}</div>` : ''}` : '<div class="small muted">未有現價</div>'}</div>
                 </li>`;
             }).join('')}</ul>
             ${explain(stocks.map((a) => {
                 const pl = stockPnL(a);
                 if (!pl) return '';
-                return `${esc(a.name)} 而家${pl.pnl >= 0 ? '高' : '低'}過你買入價 ${fmtPct(Math.abs(pl.pct))}，賬面${pl.pnl >= 0 ? '賺' : '蝕'}緊 ${fmtMoney(Math.abs(pl.pnl), a.currency, 2)}。`;
+                return `${esc(a.name)} 而家${pl.pnl >= 0 ? '高' : '低'}過你買入價 ${fmtPct(Math.abs(pl.pct))}，賬面${pl.pnl >= 0 ? '賺' : '蝕'}緊 ${fmtMoney(Math.abs(pl.pnl), a.currency, 2)}${a.currency === 'USD' ? `（${hkdHint(Math.abs(pl.pnl), a.currency, settings).replace('≈ ', '約 ')}）` : ''}。`;
             }).join('') + '未賣出之前，盈虧只係賬面數字。香港居民收美股股息會先被扣 30% 稅。')}
         </div>` : ''}
     `;
@@ -156,7 +157,7 @@ function renderAssets() {
                 <li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.name)}</div>
                         <div class="item-sub">${esc(a.institution || '')}${a.type === 'fd' && a.rate ? ` · 年息 ${Number(a.rate)}%` : ''}${a.type === 'stock' ? ` · ${Number(a.shares || 0)} 股` : ''}</div></div>
-                    <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, a.currency === 'USD' ? 2 : 0)}</div></div>
+                    <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, a.currency === 'USD' ? 2 : 0)}</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}</div>
                 </li>`).join('')}</ul>
         </div>`;
     }).join('');
@@ -175,6 +176,7 @@ function renderFD() {
     const today = todayISO();
     el.innerHTML = `<p class="section-note">按到期日排，最快到期排最頭</p>` + fds.map(({ a, days }) => {
         const interest = fdInterest(a);
+        const hint = (v) => (a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(v, a.currency, state.settings)}</div>` : '');
         let progress = null;
         if (a.start_date && a.maturity_date) {
             const total = daysBetween(a.start_date, a.maturity_date);
@@ -189,14 +191,14 @@ function renderFD() {
             ${progress !== null ? `<div class="progress" role="img" aria-label="已過 ${Math.round(progress)}%"><div style="width:${progress}%"></div></div>
                 <div class="progress-dates num"><span>${fmtDate(a.start_date)}</span><span>${fmtDate(a.maturity_date)}</span></div>` : ''}
             <dl class="fd-grid">
-                <div><dt>本金</dt><dd>${fmtMoney(Number(a.amount || 0), a.currency)}</dd></div>
+                <div><dt>本金</dt><dd>${fmtMoney(Number(a.amount || 0), a.currency)}${hint(Number(a.amount || 0))}</dd></div>
                 <div><dt>年息</dt><dd>${a.rate ? Number(a.rate) + '%' : '—'}</dd></div>
-                <div><dt>預計利息</dt><dd>${interest !== null ? fmtMoney(interest, a.currency, 2) : '—'}</dd></div>
-                <div><dt>到期總額</dt><dd>${interest !== null ? fmtMoney(Number(a.amount) + interest, a.currency, 2) : '—'}</dd></div>
+                <div><dt>預計利息</dt><dd>${interest !== null ? fmtMoney(interest, a.currency, 2) + hint(interest) : '—'}</dd></div>
+                <div><dt>到期總額</dt><dd>${interest !== null ? fmtMoney(Number(a.amount) + interest, a.currency, 2) + hint(Number(a.amount) + interest) : '—'}</dd></div>
             </dl>
             ${days !== null && days < 0
                 ? '<p class="warn-note">已經到期咗。如果續咗期，改返開始日同到期日；如果提走咗，就刪除呢筆。</p>'
-                : interest !== null ? explain(`存到 ${fmtDate(a.maturity_date)}，會收到大約 <b>${fmtMoney(interest, a.currency, 2)}</b> 利息。`) : ''}
+                : interest !== null ? explain(`存到 ${fmtDate(a.maturity_date)}，會收到大約 <b>${fmtMoney(interest, a.currency, 2)}</b>${a.currency === 'USD' ? `（${hkdHint(interest, a.currency, state.settings).replace('≈ ', '約 ')}）` : ''}利息。`) : ''}
         </div>`;
     }).join('');
 }
