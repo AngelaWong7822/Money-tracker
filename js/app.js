@@ -258,6 +258,7 @@ function openAssetDialog(asset) {
     $('#asset-error').hidden = true;
     $('#asset-dialog-title').textContent = asset ? '編輯資產' : '新增資產';
     $('#asset-delete').hidden = !asset;
+    $('#import-entry').hidden = !!asset;
     form.elements.id.value = asset?.id ?? '';
     if (asset) {
         for (const el of form.elements) {

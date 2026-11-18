@@ -75,6 +75,19 @@ function createCloudStore() {
             });
             if (error) throw error;
         },
+        /** 影相匯入：images = [{ mimeType, data(base64) }] → [asset, ...] */
+        async extractFromImages(images) {
+            const { data, error } = await client.functions.invoke('invest-extract', {
+                body: { images, today: todayISO() },
+            });
+            if (error) {
+                let msg = error.message;
+                try { msg = (await error.context.json()).error || msg; } catch { /* 冇 JSON 就用原本訊息 */ }
+                if (/Failed to send|not found|404/i.test(msg)) msg = '搵唔到 invest-extract function，可能未部署';
+                throw new Error(msg);
+            }
+            return data.assets;
+        },
     };
 }
 
@@ -113,6 +126,15 @@ function createDemoStore() {
         async deleteAsset(id) { assets = assets.filter((a) => a.id !== id); },
         async getSettings() { return { ...settings }; },
         async saveSettings(s) { settings = { ...settings, usd_hkd: s.usd_hkd }; },
+        // 示範：假裝 Gemini 讀到兩筆，其中一筆同現有嘅重複
+        async extractFromImages() {
+            await new Promise((r) => setTimeout(r, 1200));
+            return [
+                { type: 'fd', name: '3個月定期', institution: 'ZA Bank', currency: 'HKD', amount: 50000, rate: 3.2, start_date: iso(-80), maturity_date: iso(10) },
+                { type: 'fd', name: '12個月定期', institution: 'ZA Bank', currency: 'HKD', amount: 20000, rate: 2.8, start_date: iso(0), maturity_date: iso(365) },
+                { type: 'stock', name: 'Apple', institution: 'ZA Bank', currency: 'USD', symbol: 'AAPL', shares: 3, cost_price: 190, last_price: null },
+            ];
+        },
     };
 }
 

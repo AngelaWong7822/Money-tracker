@@ -290,3 +290,32 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
     position: fixed; left: 50%; bottom: 6rem; transform: translateX(-50%); z-index: 30;
     background: var(--text-primary); color: var(--card); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem;
 }
+
+/* ── 影相匯入 ── */
+.import-cta {
+    width: 100%; display: flex; align-items: center; gap: 0.8rem; text-align: left;
+    border: 1px dashed var(--accent); background: var(--accent-soft); color: var(--accent-ink);
+    border-radius: 12px; padding: 0.75rem 0.9rem; cursor: pointer; line-height: 1.4;
+}
+.import-cta .ic { width: 26px; height: 26px; }
+.import-cta b { font-weight: 600; }
+.import-cta:hover { border-style: solid; }
+.or-line { display: flex; align-items: center; gap: 0.6rem; color: var(--text-muted); font-size: 0.75rem; margin: 0.9rem 0; }
+.or-line::before, .or-line::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+
+.sheet-wide { width: min(560px, calc(100% - 1.5rem)); }
+.import-loading { text-align: center; padding: 1.5rem 0; }
+.import-loading p { margin: 0.3rem 0; }
+.spinner {
+    width: 2.2rem; height: 2.2rem; margin: 0 auto 0.6rem; border-radius: 50%;
+    border: 3px solid var(--line); border-top-color: var(--accent); animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.explain-warn { background: var(--warn-bg); color: var(--warn-ink); margin: 0 0 0.8rem; }
+.import-card { border: 1px solid var(--line-strong); border-radius: 12px; padding: 0.8rem 0.9rem 0.1rem; margin-bottom: 0.7rem; }
+.import-card.unchecked { opacity: 0.55; }
+.import-card-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.check { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--text-primary); font-size: 0.85rem; font-weight: 500; flex: none; }
+.check input { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--brand); }
+.import-card .error { margin: -0.3rem 0 0.6rem; }

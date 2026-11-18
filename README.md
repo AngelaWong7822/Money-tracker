@@ -12,6 +12,22 @@
 1. Supabase → SQL Editor → 貼 `supabase/schema.sql` 成段執行
 2. 開 GitHub repo，push 呢個資料夾，Settings → Pages 揀 `main` branch
 
+## 影相匯入（Gemini）
+
+截圖喺瀏覽器縮細 → Supabase Edge Function `invest-extract` → Gemini → 確認畫面 → 儲存。
+張圖唔會儲落任何地方；Gemini key 只放喺 Supabase secret。
+
+部署（Supabase dashboard，唔使 CLI）：
+1. Google AI Studio（https://aistudio.google.com/apikey）攞 API key
+2. Supabase → PM Management → Edge Functions → Deploy a new function → Via Editor
+   - 名：`invest-extract`
+   - 貼 `supabase/functions/invest-extract/index.ts` 全部內容 → Deploy
+   - Function 設定入面熄咗「Verify JWT」（code 自己用 `auth.getUser` 檢查登入）
+3. Edge Functions → Secrets → 新增 `GEMINI_API_KEY`
+   （可選 `GEMINI_MODEL`，預設 `gemini-2.5-flash`）
+
+注意：Gemini 免費版可能會用上傳內容改善 Google 產品，上傳前最好裁走戶口號碼。
+
 ## 本機測試
 
 ```
