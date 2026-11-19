@@ -117,6 +117,18 @@ function createCloudStore() {
             if (error) throw error;
             return data[0] ?? null;
         },
+        /** 今個月嘅比較基準：上個月最後一個快照；冇就用今個月最早嗰個 */
+        async getMonthBase() {
+            const first = todayISO().slice(0, 8) + '01';
+            const before = await client.from('invest_snapshots').select('*')
+                .lt('snap_date', first).order('snap_date', { ascending: false }).limit(1);
+            if (before.error) throw before.error;
+            if (before.data[0]) return before.data[0];
+            const after = await client.from('invest_snapshots').select('*')
+                .gte('snap_date', first).order('snap_date', { ascending: true }).limit(1);
+            if (after.error) throw after.error;
+            return after.data[0] ?? null;
+        },
         /** 問 AI：messages = [{ role: 'user' | 'model', text }] → 回覆文字 */
         async chat(facts, messages) {
             const { data, error } = await client.functions.invoke('invest-chat', { body: { facts, messages } });
@@ -231,6 +243,12 @@ function createDemoStore() {
         },
         async getPrevSnapshot() {
             return { snap_date: iso(-7), net: 300000, by_type: { fd: 169000, cash: 20000, stock: 8000, mpf: 118000 } };
+        },
+        async getMonthBase() {
+            const d = new Date();
+            d.setDate(0); // 上個月最後一日
+            return { snap_date: d.toLocaleDateString('en-CA'), net: 318200, assets_total: 321000, liabilities: 2800,
+                by_type: { fd: 169000, cash: 24000, stock: 11500, mpf: 116500 } };
         },
         async analyzeNow(facts) {
             const today = reports.filter((r) => r.source === 'manual' && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;

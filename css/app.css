@@ -387,3 +387,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .sell-row b { font-weight: 600; text-align: right; }
 #sell-cash-select { margin: -0.4rem 0 0.8rem; }
 #sell-form .check { margin-bottom: 0.6rem; }
+
+/* ── 今個月 ── */
+.month-net { margin: 0 0 0.4rem; font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.month-card .section-note { margin: 0.5rem 0 0.1rem; }
+.month-card .mini-list li:hover .item-name { color: inherit; }
+.month-realized { display: flex; justify-content: space-between; gap: 0.6rem; font-size: 0.85rem; background: var(--accent-soft); border-radius: 10px; padding: 0.5rem 0.8rem; margin-top: 0.6rem; }
+.month-realized b { font-weight: 600; }

@@ -184,16 +184,35 @@ function tradePnL(t) {
 }
 
 /** 某一年已實現盈虧合計（港幣）；冇買入價嘅唔計 */
-function realizedSummary(trades, settings, year) {
+/** period = 'YYYY'（全年）或 'YYYY-MM'（某個月） */
+function realizedSummary(trades, settings, period) {
     let total = 0, count = 0, skipped = 0;
     for (const t of trades || []) {
-        if (String(t.sold_on).slice(0, 4) !== String(year)) continue;
+        if (!String(t.sold_on).startsWith(String(period))) continue;
         const { pnl } = tradePnL(t);
         if (pnl === null) { skipped++; continue; }
         total += toHKD(pnl, t.currency, settings);
         count++;
     }
     return { total, count, skipped };
+}
+
+/**
+ * 今個月變化：而家 vs 月頭快照（base = invest_snapshots 一行）
+ * items 嘅 diff 係對淨資產嘅影響（欠款多咗 = 負數）
+ */
+function monthChange(assets, settings, base) {
+    const now = snapshotOf(assets, settings);
+    const items = [];
+    const types = new Set([...Object.keys(base.by_type || {}), ...Object.keys(now.by_type)]);
+    for (const t of types) {
+        const diff = (now.by_type[t] || 0) - Number((base.by_type || {})[t] || 0);
+        if (Math.abs(diff) >= 1) items.push({ type: t, label: (TYPES[t] || TYPES.other).label, diff });
+    }
+    const debt = now.liabilities - Number(base.liabilities || 0);
+    if (Math.abs(debt) >= 1) items.push({ type: 'credit', label: TYPES.credit.label, diff: -debt });
+    items.sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff));
+    return { net: now.net - Number(base.net || 0), items };
 }
 
 /** 每日快照（港幣，四捨五入） */
@@ -324,5 +343,5 @@ function buildFacts(assets, settings, prev, trades = []) {
 
 // 俾 Node（每日排程 script）用；瀏覽器冇 module，唔會行呢段
 if (typeof module !== 'undefined') {
-    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules, snapshotOf, buildFacts, dividendInfo, dividendTotals, tradePnL, realizedSummary };
+    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules, snapshotOf, buildFacts, dividendInfo, dividendTotals, tradePnL, realizedSummary, monthChange };
 }

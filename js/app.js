@@ -95,6 +95,36 @@ function renderRulesCard() {
 }
 
 /* ── 總覽 ── */
+/* ── 今個月變化 ── */
+function renderMonthCard() {
+    const base = state.monthBase;
+    const today = todayISO();
+    const month = today.slice(0, 7);
+    const md = (iso) => `${Number(iso.slice(5, 7))} 月 ${Number(iso.slice(8, 10))} 日`;
+    const head = (sub) => `<div class="card-head"><h2>今個月</h2><span class="small muted">${sub}</span></div>`;
+    if (!base || base.snap_date >= today) {
+        return `<div class="card">${head('')}<p class="small muted" style="margin:0">每日早上會自動記錄一次資產總額，明天起便可比較今個月的變化。</p></div>`;
+    }
+    const ch = monthChange(state.assets, state.settings, base);
+    const fromLastMonth = base.snap_date < month + '-01';
+    const signed = (v) => `${v >= 0 ? '+' : ''}${fmtMoney(v)}`;
+    const list = (items) => `<ul class="mini-list">${items.map((i) => `<li>
+            <div class="item-name">${esc(i.label)}</div>
+            <div class="item-right num ${i.diff >= 0 ? 'up' : 'down'}">${signed(i.diff)}</div></li>`).join('')}</ul>`;
+    const ups = ch.items.filter((i) => i.diff > 0);
+    const downs = ch.items.filter((i) => i.diff < 0);
+    const realized = realizedSummary(state.trades, state.settings, month);
+    return `<div class="card month-card">
+        ${head(fromLastMonth ? `與 ${md(base.snap_date)} 比較` : `由 ${md(base.snap_date)} 起`)}
+        <p class="month-net num ${ch.net >= 0 ? 'up' : 'down'}">${signed(ch.net)}</p>
+        ${ups.length ? `<p class="section-note">增加</p>${list(ups)}` : ''}
+        ${downs.length ? `<p class="section-note">減少</p>${list(downs)}` : ''}
+        ${!ch.items.length ? '<p class="small muted">各類資產暫時沒有變化。</p>' : ''}
+        ${realized.count ? `<div class="month-realized"><span>今個月賣出的已實現盈虧</span><b class="num ${realized.total >= 0 ? 'up' : 'down'}">${signed(realized.total)}</b></div>` : ''}
+        ${explain(`${fromLastMonth ? `與上月底（${md(base.snap_date)}）` : `與最早的記錄（${md(base.snap_date)}）`}比較，你的淨資產${ch.net >= 0 ? '增加' : '減少'}了 <b>${fmtMoney(Math.abs(ch.net))}</b>。這個數字包括你自行存入或提取的款項、股價升跌及匯率變動，並不只是投資盈虧。`)}
+    </div>`;
+}
+
 function renderOverview() {
     const el = $('#tab-overview');
     const { assets, settings } = state;
@@ -159,6 +189,8 @@ function renderOverview() {
                 <div class="stat-value">≈ ${fmtMoney(divTotals.net)}</div>
                 ${divTotals.untaxed ? `<div class="hkd-hint">有 ${divTotals.untaxed} 隻非美國公司未計稅</div>` : ''}</div>` : ''}
         </div>
+
+        ${renderMonthCard()}
 
         ${renderRulesCard()}
 
@@ -280,10 +312,14 @@ function render() {
 
 async function reload() {
     try {
-        const [assets, settings, trades] = await Promise.all([store.listAssets(), store.getSettings(), store.listTrades()]);
+        const [assets, settings, trades, monthBase] = await Promise.all([
+            store.listAssets(), store.getSettings(), store.listTrades(),
+            store.getMonthBase().catch(() => null),
+        ]);
         state.assets = assets;
         state.settings = settings;
         state.trades = trades;
+        state.monthBase = monthBase;
         render();
     } catch (err) {
         console.error(err);
