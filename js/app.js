@@ -42,6 +42,20 @@ function fmtShortDateTime(iso) {
     return `${d.getDate()}/${d.getMonth() + 1} ${h12}:${String(d.getMinutes()).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`;
 }
 
+/* ── 股票：每股現價 / 買入價 ── */
+function fmtPrice(v, currency) {
+    const n = Number(v);
+    // 細價股（例如 < $1）保留多啲小數
+    return fmtMoney(n, currency, n !== 0 && Math.abs(n) < 1 ? 4 : 2);
+}
+
+function priceLine(a) {
+    const parts = [];
+    if (a.last_price !== null && a.last_price !== undefined) parts.push(`現價 ${fmtPrice(a.last_price, a.currency)}`);
+    if (a.cost_price !== null && a.cost_price !== undefined) parts.push(`買入價 ${fmtPrice(a.cost_price, a.currency)}`);
+    return parts.length ? `<div class="item-sub num">${parts.join(' · ')}</div>` : '';
+}
+
 /* ── 股息 ── */
 function dividendLine(a, settings) {
     const d = dividendInfo(a);
@@ -169,7 +183,9 @@ function renderOverview() {
                 const pl = stockPnL(a);
                 return `<li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.name)}</div>
-                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股${a.price_updated_at ? ` · 股價 ${fmtShortDateTime(a.price_updated_at)}` : ''}</div>
+                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股</div>
+                        ${priceLine(a)}
+                        ${a.price_updated_at ? `<div class="item-sub">更新於 ${fmtShortDateTime(a.price_updated_at)}</div>` : ''}
                         ${dividendLine(a, settings)}</div>
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, 2)}</div>
                         ${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}
@@ -205,7 +221,8 @@ function renderAssets() {
             <ul class="mini-list">${list.map((a) => `
                 <li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.name)}</div>
-                        <div class="item-sub">${esc(a.institution || '')}${a.type === 'fd' && a.rate ? ` · 年息 ${Number(a.rate)}%` : ''}${a.type === 'stock' ? ` · ${Number(a.shares || 0)} 股` : ''}</div></div>
+                        <div class="item-sub">${esc(a.institution || '')}${a.type === 'fd' && a.rate ? ` · 年息 ${Number(a.rate)}%` : ''}${a.type === 'stock' ? ` · ${Number(a.shares || 0)} 股` : ''}</div>
+                        ${a.type === 'stock' ? priceLine(a) : ''}</div>
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, a.currency === 'USD' ? 2 : 0)}</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}</div>
                 </li>`).join('')}</ul>
         </div>`;
