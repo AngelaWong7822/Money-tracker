@@ -24,12 +24,12 @@ function daysLeftBadge(days) {
     if (days === null) return '';
     if (days < 0) return '<span class="badge badge-done">已到期</span>';
     if (days === 0) return '<span class="badge badge-soon">今日到期</span>';
-    if (days <= (state.settings.fd_remind_days ?? 7)) return `<span class="badge badge-soon">仲有 ${days} 日</span>`;
-    return `<span class="badge">仲有 ${days} 日</span>`;
+    if (days <= (state.settings.fd_remind_days ?? 7)) return `<span class="badge badge-soon">尚餘 ${days} 日</span>`;
+    return `<span class="badge">尚餘 ${days} 日</span>`;
 }
 
 /* ── 「即係話」白話解釋 ── */
-const explain = (html) => `<div class="explain"><svg class="ic"><use href="#i-info"/></svg><div><b>即係話：</b>${html}</div></div>`;
+const explain = (html) => `<div class="explain"><svg class="ic"><use href="#i-info"/></svg><div><b>簡單來說：</b>${html}</div></div>`;
 
 function emptyCard(title, body) {
     return `<div class="card empty"><p class="empty-title">${title}</p><p class="muted small">${body}</p></div>`;
@@ -55,7 +55,7 @@ function priceLine(a) {
     if (has(a.last_price)) parts.push(`<span class="price-now">現價 ${fmtPrice(a.last_price, a.currency)}</span>`);
     parts.push(has(a.cost_price)
         ? `<span class="price-cost">買入價 ${fmtPrice(a.cost_price, a.currency)}</span>`
-        : '<span class="price-missing">未有買入價，撳入去補</span>');
+        : '<span class="price-missing">未有買入價，按此補上</span>');
     return parts.length ? `<div class="item-sub num">${parts.join(' · ')}</div>` : '';
 }
 
@@ -63,7 +63,7 @@ function priceLine(a) {
 function dividendLine(a, settings) {
     const d = dividendInfo(a);
     if (!d) return '';
-    if (d.none) return '<div class="item-sub">冇派息</div>';
+    if (d.none) return '<div class="item-sub">不派息</div>';
     const net = d.taxPct === null
         ? '（非美國公司，未計稅）'
         : `（扣 ${d.taxPct}% 稅後 ≈ ${fmtMoney(d.net, a.currency, 2)}${a.currency === 'USD' ? ` / ${hkdHint(d.net, a.currency, settings).replace('≈ ', '')}` : ''}）`;
@@ -71,22 +71,22 @@ function dividendLine(a, settings) {
 }
 
 function dividendExplain(t) {
-    if (!t || !t.counted) return t && t.missing ? '股息資料下次每日更新會攞埋。' : '';
-    let text = `按而家嘅派息水平，你一年大約收 ${fmtMoney(t.net)} 股息（已扣美國公司 30% 稅）`;
-    if (t.untaxed) text += `；其中 ${t.untaxed} 隻係非美國公司，稅率唔同，呢度用咗稅前數`;
-    return text + '。股息唔保證，公司可以加、減或者停派。';
+    if (!t || !t.counted) return t && t.missing ? '股息資料將於下次每日更新時取得。' : '';
+    let text = `按現時派息水平，你每年約收取 ${fmtMoney(t.net)} 股息（已扣除美國公司 30% 稅）`;
+    if (t.untaxed) text += `；其中 ${t.untaxed} 隻為非美國公司，稅率不同，此處以稅前金額計算`;
+    return text + '。股息並無保證，公司可增加、減少或停止派發。';
 }
 
 /* ── 規則檢查 ── */
 function renderRulesCard() {
     const rules = checkRules(state.assets, state.settings);
     if (!rules.length) {
-        return `<div class="card rules-empty"><div class="card-head"><h2>我嘅規則</h2><button class="link-btn" data-open-settings>設定規則</button></div>
-            <p class="small muted" style="margin:0">你可以定啲簡單規則，例如「活期最少要有 $50,000」。唔符合嘅話會提你。</p></div>`;
+        return `<div class="card rules-empty"><div class="card-head"><h2>我的規則</h2><button class="link-btn" data-open-settings>設定規則</button></div>
+            <p class="small muted" style="margin:0">你可以設定簡單規則，例如「活期最少需有 $50,000」。如不符合，會提醒你。</p></div>`;
     }
     const bad = rules.filter((r) => !r.ok).length;
     return `<div class="card">
-        <div class="card-head"><h2>我嘅規則</h2><span class="small ${bad ? 'warn-ink' : 'up'}">${bad ? `${bad} 條唔符合` : '全部符合'}</span></div>
+        <div class="card-head"><h2>我的規則</h2><span class="small ${bad ? 'warn-ink' : 'up'}">${bad ? `${bad} 條不符合` : '全部符合'}</span></div>
         <ul class="rule-list">${rules.map((r) => `<li class="${r.ok ? 'ok' : 'bad'}">
             <span class="rule-mark" aria-hidden="true">${r.ok ? '✓' : '!'}</span>
             <div><div class="item-name">${esc(r.title)}</div><div class="item-sub">${esc(r.detail)}</div></div>
@@ -99,7 +99,7 @@ function renderOverview() {
     const el = $('#tab-overview');
     const { assets, settings } = state;
     if (!assets.length) {
-        el.innerHTML = emptyCard('記低你第一筆資產', '撳右下角「＋」，加你嘅定期或者股票。');
+        el.innerHTML = emptyCard('記錄你的第一筆資產', '按右下角「＋」，新增你的定期或股票。');
         return;
     }
     const s = summarize(assets, settings);
@@ -121,17 +121,17 @@ function renderOverview() {
 
     let allocText = '';
     if (biggest) {
-        allocText = `你最多錢放喺<b>${TYPES[biggest.type].label}</b>（${fmtPct(biggest.pct, 0)}）`;
+        allocText = `你最多資金放在<b>${TYPES[biggest.type].label}</b>（${fmtPct(biggest.pct, 0)}）`;
         if (TYPES[biggest.type].explain) allocText += `，${TYPES[biggest.type].explain}`;
         allocText += '。';
     }
     const stocks = assets.filter((a) => a.type === 'stock');
     const divTotals = stocks.length ? dividendTotals(assets, settings) : null;
-    if (stocks.length === 1) allocText += `股票部分得 1 隻（${esc(stocks[0].name)}），嗰部分嘅升跌完全跟呢間公司。`;
+    if (stocks.length === 1) allocText += `股票部分只有 1 隻（${esc(stocks[0].name)}），該部分的升跌完全取決於這間公司。`;
 
     const hkdPct = s.assetsTotal ? (s.byCurrency.HKD / s.assetsTotal) * 100 : 0;
     const usdPct = s.assetsTotal ? (s.byCurrency.USD / s.assetsTotal) * 100 : 0;
-    if (usdPct > 0) allocText += `有 ${fmtPct(usdPct, 0)} 係美元，因為港元同美元掛鈎，匯率上落對你影響好細。`;
+    if (usdPct > 0) allocText += `有 ${fmtPct(usdPct, 0)} 為美元；由於港元與美元掛鈎，匯率波動對你影響很小。`;
 
     // 定期
     const fds = assets.filter((a) => a.type === 'fd' && a.maturity_date)
@@ -170,14 +170,14 @@ function renderOverview() {
         </div>
 
         <div class="card">
-            <div class="card-head"><h2>就到期</h2>${fds.length ? '<button class="link-btn" data-goto="fd">睇全部</button>' : ''}</div>
+            <div class="card-head"><h2>即將到期</h2>${fds.length ? '<button class="link-btn" data-goto="fd">查看全部</button>' : ''}</div>
             ${upcoming.length ? `<ul class="mini-list">${upcoming.map(({ a, days }) => `
                 <li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.institution ? a.institution + ' ' : '')}${esc(a.name)}</div>
                         <div class="item-sub num">${fmtMoney(nativeValue(a), a.currency)}${a.currency === 'USD' ? `（${hkdHint(nativeValue(a), a.currency, settings)}）` : ''} · 年息 ${a.rate ? Number(a.rate) + '%' : '—'}</div></div>
                     ${daysLeftBadge(days)}
-                </li>`).join('')}</ul>` : '<p class="muted small">暫時冇定期</p>'}
-            ${next ? explain(`最快一筆係 ${esc(next.a.institution || '')} ${esc(next.a.name)}，${next.days === 0 ? '今日' : `${next.days} 日後`}到期。到期之後會自動續期定轉返活期，要睇你開定期嗰陣點揀，記得去銀行 app 確認。`) : ''}
+                </li>`).join('')}</ul>` : '<p class="muted small">暫時沒有定期</p>'}
+            ${next ? explain(`最快到期的一筆是 ${esc(next.a.institution || '')} ${esc(next.a.name)}，${next.days === 0 ? '今日' : `${next.days} 日後`}到期。到期後會自動續期或轉回活期，視乎你開立定期時的選擇，請到銀行 app 確認。`) : ''}
         </div>
 
         ${stocks.length ? `<div class="card">
@@ -198,8 +198,8 @@ function renderOverview() {
             ${explain(stocks.map((a) => {
                 const pl = stockPnL(a);
                 if (!pl) return '';
-                return `${esc(a.name)} 而家${pl.pnl >= 0 ? '高' : '低'}過你買入價 ${fmtPct(Math.abs(pl.pct))}，賬面${pl.pnl >= 0 ? '賺' : '蝕'}緊 ${fmtMoney(Math.abs(pl.pnl), a.currency, 2)}${a.currency === 'USD' ? `（${hkdHint(Math.abs(pl.pnl), a.currency, settings).replace('≈ ', '約 ')}）` : ''}。`;
-            }).join('') + '未賣出之前，盈虧只係賬面數字。' + dividendExplain(divTotals))}
+                return `${esc(a.name)} 現價${pl.pnl >= 0 ? '高' : '低'}於你的買入價 ${fmtPct(Math.abs(pl.pct))}，賬面${pl.pnl >= 0 ? '盈利' : '虧損'} ${fmtMoney(Math.abs(pl.pnl), a.currency, 2)}${a.currency === 'USD' ? `（${hkdHint(Math.abs(pl.pnl), a.currency, settings).replace('≈ ', '約 ')}）` : ''}。`;
+            }).join('') + '未賣出前，盈虧只是賬面數字。' + dividendExplain(divTotals))}
         </div>` : ''}
     `;
 }
@@ -209,7 +209,7 @@ function renderAssets() {
     const el = $('#tab-assets');
     const { assets, settings } = state;
     if (!assets.length) {
-        el.innerHTML = emptyCard('仲未有資產', '撳右下角「＋」新增。');
+        el.innerHTML = emptyCard('尚未有資產', '按右下角「＋」新增。');
         return;
     }
     const order = [...ALLOCATION_ORDER, 'credit'];
@@ -239,11 +239,11 @@ function renderFD() {
         .map((a) => ({ a, days: fdDaysLeft(a) }))
         .sort((x, y) => (x.days ?? 99999) - (y.days ?? 99999));
     if (!fds.length) {
-        el.innerHTML = emptyCard('仲未有定期', '撳右下角「＋」，類別揀「定期」。');
+        el.innerHTML = emptyCard('尚未有定期', '按右下角「＋」，類別選擇「定期」。');
         return;
     }
     const today = todayISO();
-    el.innerHTML = `<p class="section-note">按到期日排，最快到期排最頭</p>` + fds.map(({ a, days }) => {
+    el.innerHTML = `<p class="section-note">按到期日排列，最快到期的排在最前</p>` + fds.map(({ a, days }) => {
         const interest = fdInterest(a);
         const hint = (v) => (a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(v, a.currency, state.settings)}</div>` : '');
         let progress = null;
@@ -266,8 +266,8 @@ function renderFD() {
                 <div><dt>到期總額</dt><dd>${interest !== null ? fmtMoney(Number(a.amount) + interest, a.currency, 2) + hint(Number(a.amount) + interest) : '—'}</dd></div>
             </dl>
             ${days !== null && days < 0
-                ? '<p class="warn-note">已經到期咗。如果續咗期，改返開始日同到期日；如果提走咗，就刪除呢筆。</p>'
-                : interest !== null ? explain(`存到 ${fmtDate(a.maturity_date)}，會收到大約 <b>${fmtMoney(interest, a.currency, 2)}</b>${a.currency === 'USD' ? `（${hkdHint(interest, a.currency, state.settings).replace('≈ ', '約 ')}）` : ''}利息。`) : ''}
+                ? '<p class="warn-note">已經到期。如已續期，請更新開始日及到期日；如已提取，請刪除此筆。</p>'
+                : interest !== null ? explain(`存至 ${fmtDate(a.maturity_date)}，可收取約 <b>${fmtMoney(interest, a.currency, 2)}</b>${a.currency === 'USD' ? `（${hkdHint(interest, a.currency, state.settings).replace('≈ ', '約 ')}）` : ''}利息。`) : ''}
         </div>`;
     }).join('');
 }
@@ -369,7 +369,7 @@ form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const asset = readForm();
     if (asset.type === 'fd' && asset.start_date && asset.maturity_date && asset.maturity_date <= asset.start_date) {
-        $('#asset-error').textContent = '到期日要喺開始日之後';
+        $('#asset-error').textContent = '到期日必須在開始日之後';
         $('#asset-error').hidden = false;
         return;
     }
@@ -424,8 +424,8 @@ $('#settings-btn').addEventListener('click', () => {
     f.fd_remind_days.value = st.fd_remind_days ?? 7;
     f.email_enabled.checked = st.email_enabled !== false;
     $('#fx-hint').textContent = st.usd_hkd_updated_at
-        ? `每朝自動更新，上次更新：${new Date(st.usd_hkd_updated_at).toLocaleString('zh-HK', { dateStyle: 'short', timeStyle: 'short' })}。自己改咗都會俾下次自動更新蓋過。`
-        : '每朝自動更新（第一次更新之前用你填嘅數）。港元同美元掛鈎，一般喺 7.75 至 7.85 之間。';
+        ? `每朝自動更新，上次更新：${new Date(st.usd_hkd_updated_at).toLocaleString('zh-HK', { dateStyle: 'short', timeStyle: 'short' })}。手動修改的數值會被下次自動更新取代。`
+        : '每朝自動更新（首次更新前使用你填寫的數值）。港元與美元掛鈎，一般介乎 7.75 至 7.85。';
     settingsDialog.showModal();
 });
 $('#settings-cancel').addEventListener('click', () => settingsDialog.close());

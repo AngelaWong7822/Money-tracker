@@ -1,13 +1,13 @@
 /* 計數：全部換算做港幣 */
 
 const TYPES = {
-    fd:        { label: '定期',     color: 'var(--series-1)', explain: '本金穩陣、利息固定，但錢要鎖到到期日先攞得返' },
-    cash:      { label: '活期/儲蓄', color: 'var(--series-2)', explain: '隨時攞得返，但利息通常最低' },
-    stock:     { label: '股票',     color: 'var(--series-3)', explain: '有機會升值同收股息，但價格會上落，可以蝕本' },
-    mpf:       { label: '強積金',   color: 'var(--series-4)', explain: '一般要到 65 歲先攞得返，係長線退休錢' },
-    insurance: { label: '儲蓄保險', color: 'var(--series-5)', explain: '通常要持有好多年，太早退保可能攞返少過已供嘅錢' },
+    fd:        { label: '定期',     color: 'var(--series-1)', explain: '本金穩健、利息固定，但資金須存至到期日才可取回' },
+    cash:      { label: '活期/儲蓄', color: 'var(--series-2)', explain: '可隨時提取，但利息通常最低' },
+    stock:     { label: '股票',     color: 'var(--series-3)', explain: '有機會升值及收取股息，但價格會波動，或會虧損' },
+    mpf:       { label: '強積金',   color: 'var(--series-4)', explain: '一般須到 65 歲才可提取，屬長線退休儲蓄' },
+    insurance: { label: '儲蓄保險', color: 'var(--series-5)', explain: '通常須持有多年，提早退保或會取回少於已繳保費' },
     other:     { label: '其他',     color: 'var(--series-6)', explain: '' },
-    credit:    { label: '信用卡欠款', color: 'var(--text-muted)', explain: '要還嘅錢，會喺總資產度減返' },
+    credit:    { label: '信用卡欠款', color: 'var(--text-muted)', explain: '需要償還的款項，會從總資產中扣除' },
 };
 // 分佈圖固定次序（顏色跟類別，唔跟排名）
 const ALLOCATION_ORDER = ['fd', 'cash', 'stock', 'mpf', 'insurance', 'other'];
@@ -107,8 +107,8 @@ function checkRules(assets, settings) {
             ok: cash >= minCash,
             title: `活期最少 ${fmtMoney(minCash)}`,
             detail: cash >= minCash
-                ? `而家活期有 ${fmtMoney(cash)}，夠你定嘅數。`
-                : `而家活期得 ${fmtMoney(cash)}，少過你定嘅 ${fmtMoney(minCash)}，差 ${fmtMoney(minCash - cash)}。`,
+                ? `現時活期有 ${fmtMoney(cash)}，已達你設定的金額。`
+                : `現時活期只有 ${fmtMoney(cash)}，低於你設定的 ${fmtMoney(minCash)}，尚欠 ${fmtMoney(minCash - cash)}。`,
         });
     }
     const maxStock = num(settings.max_stock_pct);
@@ -120,10 +120,10 @@ function checkRules(assets, settings) {
         results.push({
             key: 'max_stock_pct',
             ok: over.length === 0,
-            title: `單一股票唔超過 ${maxStock}%`,
+            title: `單一股票不超過 ${maxStock}%`,
             detail: over.length === 0
-                ? '每隻股票都喺你定嘅比例之內。'
-                : over.map((x) => `${x.a.name} 佔總資產 ${fmtPct(x.pct)}`).join('、') + `，超過你定嘅 ${maxStock}%。`,
+                ? '每隻股票均在你設定的比例之內。'
+                : over.map((x) => `${x.a.name} 佔總資產 ${fmtPct(x.pct)}`).join('、') + `，超過你設定的 ${maxStock}%。`,
         });
     }
     const maxUsd = num(settings.max_usd_pct);
@@ -132,10 +132,10 @@ function checkRules(assets, settings) {
         results.push({
             key: 'max_usd_pct',
             ok: usdPct <= maxUsd,
-            title: `美元唔超過 ${maxUsd}%`,
+            title: `美元不超過 ${maxUsd}%`,
             detail: usdPct <= maxUsd
-                ? `而家美元佔 ${fmtPct(usdPct)}。`
-                : `而家美元佔 ${fmtPct(usdPct)}，超過你定嘅 ${maxUsd}%。`,
+                ? `現時美元佔 ${fmtPct(usdPct)}。`
+                : `現時美元佔 ${fmtPct(usdPct)}，超過你設定的 ${maxUsd}%。`,
         });
     }
     return results;
@@ -295,7 +295,7 @@ function buildFacts(assets, settings, prev, trades = []) {
         fd_maturing_next_90_days: { total_hkd: r(soon.reduce((x, f) => x + f.principal_hkd, 0)), by_month_hkd: byMonth },
         stocks,
         us_dividend_withholding_tax_pct: stocks.some((x) => x.company_country === 'US') ? US_DIVIDEND_TAX_PCT : null,
-        dividends_note: '股息係按而家派息水平估算全年，唔保證；非美國公司（company_country 唔係 US）稅率唔同，只有稅前數',
+        dividends_note: '股息按現時派息水平估算全年，並無保證；非美國公司（company_country 不是 US）稅率不同，只有稅前金額',
         annual_dividends_hkd: (() => {
             const t = dividendTotals(assets, settings);
             return { estimated_total: r(t.net), stocks_paying: t.counted, non_us_untaxed: t.untaxed, stocks_without_data: t.missing };
@@ -308,7 +308,7 @@ function buildFacts(assets, settings, prev, trades = []) {
             return {
                 year,
                 total_hkd: r(sum.total),
-                note: '已實現盈虧 = 已經賣出、真正落袋嘅賺蝕；香港冇資本增值稅',
+                note: '已實現盈虧 = 已賣出並實際取得的盈虧；香港沒有資本增值稅',
                 trades: (trades || []).filter((t) => String(t.sold_on).startsWith(year)).slice(0, 20).map((t) => {
                     const p = tradePnL(t);
                     return {

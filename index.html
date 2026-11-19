@@ -28,14 +28,14 @@
         </defs>
     </svg>
 
-    <div id="demo-banner" class="demo-banner" hidden>示範模式：資料係假嘅，唔會儲落雲端</div>
+    <div id="demo-banner" class="demo-banner" hidden>示範模式：資料為虛構，不會儲存到雲端</div>
 
     <!-- 登入 -->
     <section id="login-view" class="login" hidden>
         <div class="login-card">
             <div class="login-logo">$</div>
             <h1>錢錢簿</h1>
-            <p class="muted">用 PM tracker 同一個帳戶登入</p>
+            <p class="muted">使用與 PM tracker 相同的帳戶登入</p>
             <form id="login-form">
                 <label>Email<input type="email" name="email" autocomplete="username" required></label>
                 <label>密碼<input type="password" name="password" autocomplete="current-password" required></label>
@@ -79,9 +79,9 @@
             <div id="import-entry">
                 <button type="button" id="import-btn" class="import-cta">
                     <svg class="ic"><use href="#i-camera"/></svg>
-                    <span><b>影相匯入</b><br><span class="small muted">揀銀行 app 截圖，AI 幫你填</span></span>
+                    <span><b>影相匯入</b><br><span class="small muted">選擇銀行 app 截圖，由 AI 代為填寫</span></span>
                 </button>
-                <p class="or-line"><span>或者自己輸入</span></p>
+                <p class="or-line"><span>或自行輸入</span></p>
             </div>
             <input type="hidden" name="id">
             <p class="field-label">類別</p>
@@ -110,7 +110,7 @@
                     <label>開始日<input name="start_date" type="date"></label>
                     <label>到期日<input name="maturity_date" type="date"></label>
                 </div>
-                <p class="hint">銀行寫嘅息率係「年息」。例如 3 個月定期寫 3%，實際收到大約係本金嘅 0.75%。</p>
+                <p class="hint">銀行列出的息率是「年息」。例如 3 個月定期列明 3%，實際所得約為本金的 0.75%。</p>
             </div>
 
             <div data-show="stock">
@@ -122,7 +122,7 @@
                     <label>平均買入價（每股）<input name="cost_price" type="number" step="0.0001" min="0" inputmode="decimal"></label>
                     <label>現價（每股）<input name="last_price" type="number" step="0.0001" min="0" inputmode="decimal"></label>
                 </div>
-                <p class="hint">買入價可以喺 ZA app 嘅持倉頁搵到。現價暫時要自己打，第 2 期會自動更新。</p>
+                <p class="hint">買入價可在 ZA app 的持倉頁找到。現價每日會自動更新。</p>
             </div>
 
             <label>備註<textarea name="notes" rows="2"></textarea></label>
@@ -144,19 +144,19 @@
         <h2>影相匯入</h2>
         <div id="import-loading" class="import-loading" hidden>
             <div class="spinner"></div>
-            <p>Gemini 讀緊截圖…</p>
-            <p class="small muted">通常要 5 至 15 秒</p>
+            <p>Gemini 正在讀取截圖…</p>
+            <p class="small muted">通常需時 5 至 15 秒</p>
         </div>
         <div id="import-result" hidden>
             <p class="small muted" id="import-summary"></p>
-            <div class="explain explain-warn"><svg class="ic"><use href="#i-info"/></svg><div><b>儲存之前望一望：</b>AI 有機會睇錯數字，尤其係日期同小數點。每一格都改得。</div></div>
+            <div class="explain explain-warn"><svg class="ic"><use href="#i-info"/></svg><div><b>儲存前請核對：</b>AI 有機會讀錯數字，尤其是日期及小數點。每一格均可修改。</div></div>
             <div id="import-list"></div>
         </div>
         <p id="import-error" class="error" hidden></p>
         <div class="sheet-actions">
             <span class="spacer"></span>
             <button type="button" id="import-cancel" class="btn">取消</button>
-            <button type="button" id="import-save" class="btn btn-primary" hidden>儲存已剔選</button>
+            <button type="button" id="import-save" class="btn btn-primary" hidden>儲存已選項目</button>
         </div>
     </dialog>
 
@@ -174,7 +174,7 @@
                 <label>賣出價（每股）<input name="sell_price" type="number" step="any" min="0" required inputmode="decimal"></label>
                 <label>手續費<input name="fee" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></label>
             </div>
-            <p class="hint">賣出價預設係錢錢簿最近攞到嘅現價，記得改做 ZA 實際成交價。</p>
+            <p class="hint">賣出價預設為錢錢簿最近取得的現價，請改為 ZA 的實際成交價。</p>
             <div class="sell-preview" id="sell-preview"></div>
             <label class="check" id="sell-cash-wrap" hidden><input type="checkbox" name="add_cash"> <span id="sell-cash-label"></span></label>
             <select name="cash_id" id="sell-cash-select" hidden></select>
@@ -201,7 +201,7 @@
                 <label>買入價（每股）<input name="cost_price" type="number" step="any" min="0" inputmode="decimal"></label>
                 <label>賣出價（每股）<input name="sell_price" type="number" step="any" min="0" required inputmode="decimal"></label>
             </div>
-            <p class="hint">改或者刪除呢筆記錄，唔會自動改返持倉股數。</p>
+            <p class="hint">修改或刪除此記錄，不會自動更改持倉股數。</p>
             <p id="trade-error" class="error" hidden></p>
             <div class="sheet-actions">
                 <button type="button" id="trade-delete" class="btn btn-danger">刪除</button>
@@ -218,19 +218,19 @@
             <h2>設定</h2>
             <p class="settings-section">匯率</p>
             <label>美元兌港元匯率<input name="usd_hkd" type="number" step="0.0001" min="0" required inputmode="decimal"></label>
-            <p class="hint" id="fx-hint">每朝自動更新。港元同美元掛鈎，一般喺 7.75 至 7.85 之間。</p>
+            <p class="hint" id="fx-hint">每朝自動更新。港元與美元掛鈎，一般介乎 7.75 至 7.85。</p>
 
-            <p class="settings-section">我嘅規則</p>
-            <p class="hint">留空 = 唔用嗰條規則。唔符合嘅話，總覽會顯示 ⚠，亦會 email 提你。</p>
-            <label>活期最少要有（港幣）<input name="min_cash" type="number" step="1" min="0" inputmode="numeric" placeholder="例如 50000"></label>
+            <p class="settings-section">我的規則</p>
+            <p class="hint">留空即不使用該規則。如不符合，總覽會顯示 ⚠，並以 email 提醒你。</p>
+            <label>活期最少需有（港幣）<input name="min_cash" type="number" step="1" min="0" inputmode="numeric" placeholder="例如 50000"></label>
             <div class="row">
                 <label>單一股票最多佔 %<input name="max_stock_pct" type="number" step="0.1" min="0" max="100" inputmode="decimal" placeholder="例如 10"></label>
                 <label>美元最多佔 %<input name="max_usd_pct" type="number" step="0.1" min="0" max="100" inputmode="decimal" placeholder="例如 30"></label>
             </div>
 
             <p class="settings-section">提醒</p>
-            <label>定期到期前幾多日提我<input name="fd_remind_days" type="number" step="1" min="1" max="60" required inputmode="numeric"></label>
-            <label class="check"><input type="checkbox" name="email_enabled"> 有嘢要提就寄 email 俾我</label>
+            <label>定期到期前多少日提醒<input name="fd_remind_days" type="number" step="1" min="1" max="60" required inputmode="numeric"></label>
+            <label class="check"><input type="checkbox" name="email_enabled"> 有需要提醒時寄 email 給我</label>
             <div class="sheet-actions">
                 <span class="spacer"></span>
                 <button type="button" id="settings-cancel" class="btn">取消</button>

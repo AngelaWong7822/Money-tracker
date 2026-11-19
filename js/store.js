@@ -127,7 +127,7 @@ function createCloudStore() {
                     const body = await error.context.json();
                     if (body?.error) { msg = body.error; fromFunction = true; }
                 } catch { /* 冇 JSON 就用原本訊息 */ }
-                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '連唔到 invest-chat function，檢查下網絡或者 function 有冇部署';
+                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '無法連接 invest-chat function，請檢查網絡或 function 是否已部署';
                 throw new Error(msg);
             }
             return data.reply;
@@ -141,7 +141,7 @@ function createCloudStore() {
                     const body = await error.context.json();
                     if (body?.error) { msg = body.error; fromFunction = true; }
                 } catch { /* 冇 JSON 就用原本訊息 */ }
-                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '連唔到 invest-analyze function，檢查下網絡或者 function 有冇部署';
+                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '無法連接 invest-analyze function，請檢查網絡或 function 是否已部署';
                 throw new Error(msg);
             }
             return data;
@@ -158,7 +158,7 @@ function createCloudStore() {
                     const body = await error.context.json();
                     if (body?.error) { msg = body.error; fromFunction = true; }
                 } catch { /* 冇 JSON 就用原本訊息 */ }
-                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '連唔到 invest-extract function，檢查下網絡或者 function 有冇部署';
+                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '無法連接 invest-extract function，請檢查網絡或 function 是否已部署';
                 throw new Error(msg);
             }
             return data.assets;
@@ -192,7 +192,7 @@ function createDemoStore() {
         content: {
             headline: '（示範）淨資產大約 $32 萬，定期佔一半',
             sections: [
-                { title: '本週總結', body: '呢個係第一份報告，下個禮拜開始會同上週比較。' },
+                { title: '本週總結', body: '這是第一份報告，下星期起會與上週比較。' },
                 { title: '資產分佈', body: '定期佔 52%，強積金佔 37%，股票佔 3%。' },
             ],
             watch_points: [],
@@ -227,22 +227,22 @@ function createDemoStore() {
         async chat(facts, messages) {
             await new Promise((r) => setTimeout(r, 800));
             const q = messages[messages.length - 1].text;
-            return `（示範回覆）你問：「${q}」\n\n根據錢錢簿，你嘅淨資產係 **${fmtMoney(facts.net_hkd)}**，其中：\n- 定期佔 ${facts.by_type['定期']?.pct ?? 0}%\n- 股票佔 ${facts.by_type['股票']?.pct ?? 0}%\n\n以上只係示範，真版會由 Gemini 回答。`;
+            return `（示範回覆）你問：「${q}」\n\n根據錢錢簿，你的淨資產為 **${fmtMoney(facts.net_hkd)}**，其中：\n- 定期佔 ${facts.by_type['定期']?.pct ?? 0}%\n- 股票佔 ${facts.by_type['股票']?.pct ?? 0}%\n\n以上只是示範，正式版本會由 Gemini 回答。`;
         },
         async getPrevSnapshot() {
             return { snap_date: iso(-7), net: 300000, by_type: { fd: 169000, cash: 20000, stock: 8000, mpf: 118000 } };
         },
         async analyzeNow(facts) {
             const today = reports.filter((r) => r.source === 'manual' && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
-            if (today >= 3) throw new Error('今日已經分析咗 3 次，聽日再試啦');
+            if (today >= 3) throw new Error('今日已分析 3 次，請明天再試');
             await new Promise((r) => setTimeout(r, 1200));
             const report = {
                 id: `demo-r-${Date.now()}`, created_at: new Date().toISOString(), source: 'manual', model: 'demo',
                 content: {
-                    headline: `淨資產 ${fmtMoney(facts.net_hkd)}，比上週多咗 ${fmtMoney(facts.change_since_last_week?.net_change_hkd ?? 0)}`,
+                    headline: `淨資產 ${fmtMoney(facts.net_hkd)}，比上週增加 ${fmtMoney(facts.change_since_last_week?.net_change_hkd ?? 0)}`,
                     sections: [
-                        { title: '本週總結', body: '（示範）你嘅淨資產比上個禮拜多咗，主要因為活期多咗錢。' },
-                        { title: '資產分佈', body: '（示範）一半以上嘅錢放喺定期，股票佔好細部分。' },
+                        { title: '本週總結', body: '（示範）你的淨資產比上星期增加，主要因為活期存款增加。' },
+                        { title: '資產分佈', body: '（示範）一半以上的資金放在定期，股票只佔很小部分。' },
                         { title: '定期', body: '（示範）未來 90 日有兩筆定期到期。' },
                     ],
                     watch_points: ['（示範）ZA Bank 3個月定期 10 日後到期'],

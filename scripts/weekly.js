@@ -37,8 +37,8 @@ function emailHtml(report) {
         </div>
         ${sections}
         ${watch}
-        <p style="margin-top:18px"><a href="${APP_URL}" style="color:#1f5fa8">打開錢錢簿睇詳細</a></p>
-        <p style="color:#8c99aa;font-size:12px">由 Gemini 根據你嘅資料自動寫成，只係分析，唔係投資建議。</p>
+        <p style="margin-top:18px"><a href="${APP_URL}" style="color:#1f5fa8">開啟錢錢簿查看詳情</a></p>
+        <p style="color:#8c99aa;font-size:12px">由 Gemini 根據你的資料自動撰寫，僅供分析，並非投資建議。</p>
     </div>`;
 }
 

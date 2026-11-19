@@ -114,7 +114,7 @@ function emailHtml(items) {
         <div style="background:#0f2a4a;color:#fff;border-radius:12px;padding:14px 16px;font-size:16px;font-weight:600">錢錢簿提醒</div>
         <table style="width:100%;border-collapse:collapse;margin-top:8px">${rows}</table>
         <p style="margin-top:16px"><a href="${APP_URL}" style="color:#1f5fa8">打開錢錢簿</a></p>
-        <p style="color:#8c99aa;font-size:12px">呢封係自動提醒，唔係投資建議。想改提醒，去錢錢簿 → 設定。</p>
+        <p style="color:#8c99aa;font-size:12px">此為自動提醒，並非投資建議。如需更改提醒，請前往錢錢簿 → 設定。</p>
     </div>`;
 }
 

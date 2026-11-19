@@ -2,10 +2,10 @@
 
 const CHAT_PER_DAY = 30;
 const CHAT_STARTERS = [
-    '我啲錢分佈成點？',
-    '未來 3 個月有幾多定期到期？',
-    '如果股票全部跌 10%，我淨資產少幾多？',
-    'ETF 同單一股票有咩分別？',
+    '我的資金分佈如何？',
+    '未來 3 個月有多少定期到期？',
+    '如果股票全部下跌 10%，我的淨資產會減少多少？',
+    'ETF 與單一股票有何分別？',
 ];
 const chat = { messages: [], busy: false, prev: undefined };
 
@@ -50,18 +50,18 @@ function chatFormat(text) {
 function renderChatLog() {
     const log = $('#chat-log');
     if (!chat.messages.length) {
-        log.innerHTML = '<p class="chat-empty">問我任何關於你資產嘅嘢，或者一般理財問題都得。</p>';
+        log.innerHTML = '<p class="chat-empty">可詢問任何關於你資產的問題，或一般理財問題。</p>';
     } else {
         log.innerHTML = chat.messages.map((m) => m.role === 'user'
             ? `<div class="bubble bubble-user">${esc(m.text).replace(/\n/g, '<br>')}</div>`
             : m.error
                 ? `<div class="bubble bubble-error">${esc(m.text)}</div>`
-                : `<div class="bubble bubble-ai">${chatFormat(m.text)}<div class="bubble-note">AI 回答，唔係持牌顧問意見</div></div>`).join('')
+                : `<div class="bubble bubble-ai">${chatFormat(m.text)}<div class="bubble-note">AI 回答，並非持牌顧問意見</div></div>`).join('')
             + (chat.busy ? '<div class="bubble bubble-ai bubble-typing"><span></span><span></span><span></span></div>' : '');
         log.scrollTop = log.scrollHeight;
     }
     const left = Math.max(0, CHAT_PER_DAY - chatUsage());
-    $('#chat-left').textContent = `今日仲可以問 ${left} 次`;
+    $('#chat-left').textContent = `今日尚可提問 ${left} 次`;
     $('#chat-starters').hidden = chat.messages.length > 0;
     $('#chat-send').disabled = chat.busy || left === 0;
     $('#chat-clear').hidden = !chat.messages.length;
@@ -70,7 +70,7 @@ function renderChatLog() {
 async function chatSend(text) {
     text = text.trim();
     if (!text || chat.busy) return;
-    if (chatUsage() >= CHAT_PER_DAY) { toast('今日次數用晒，聽日再問啦'); return; }
+    if (chatUsage() >= CHAT_PER_DAY) { toast('今日次數已用完，請明天再試'); return; }
     chat.messages.push({ role: 'user', text });
     chat.busy = true;
     $('#chat-input').value = '';
@@ -98,11 +98,11 @@ async function chatSend(text) {
         <div id="chat-log" class="chat-log"></div>
         <div id="chat-starters" class="chat-starters">${CHAT_STARTERS.map((q) => `<button type="button" class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
         <form id="chat-form" class="chat-form">
-            <textarea id="chat-input" rows="1" maxlength="2000" placeholder="問下 AI…" aria-label="問題"></textarea>
+            <textarea id="chat-input" rows="1" maxlength="2000" placeholder="向 AI 提問…" aria-label="問題"></textarea>
             <button id="chat-send" type="submit" class="btn btn-primary">送出</button>
         </form>
         <div class="chat-foot">
-            <span>只傳計好嘅數字，冇戶口號碼同名；對話唔會儲存</span>
+            <span>只傳送計算好的數字，不含戶口號碼及姓名；對話不會儲存</span>
             <button type="button" id="chat-clear" class="link-btn">清除對話</button>
         </div>
     </div>`;

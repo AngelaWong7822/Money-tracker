@@ -34,7 +34,7 @@ function renderTradesCard() {
                 <div class="item-right small">${pnlText(p.pnl, p.pct, t.currency, state.settings)}</div>
             </li>`;
         }).join('')}</ul>
-        ${explain(`已實現盈虧係已經賣出、真正落袋嘅賺蝕（已扣手續費）。香港冇資本增值稅，所以唔使為呢啲賺蝕報稅。${sum.skipped ? `有 ${sum.skipped} 筆冇買入價，冇計入合計。` : ''}`)}
+        ${explain(`已實現盈虧是已賣出並實際取得的盈虧（已扣除手續費）。香港沒有資本增值稅，因此毋須為這些盈虧報稅。${sum.skipped ? `有 ${sum.skipped} 筆沒有買入價，未計入合計。` : ''}`)}
     </div>`;
 }
 
@@ -47,9 +47,9 @@ function updateSellPreview() {
     const hint = (v, signed) => (a.currency === 'USD' ? `（${hkdHint(v, a.currency, state.settings, signed)}）` : '');
     $('#sell-preview').innerHTML = `
         <div class="sell-row"><span>收到</span><b class="num">${fmtMoney(p.proceeds, a.currency, 2)}${hint(p.proceeds)}</b></div>
-        <div class="sell-row"><span>已實現盈虧</span><b class="num">${p.pnl === null ? '<span class="muted">未有買入價，計唔到</span>'
+        <div class="sell-row"><span>已實現盈虧</span><b class="num">${p.pnl === null ? '<span class="muted">未有買入價，無法計算</span>'
             : `<span class="${p.pnl >= 0 ? 'up' : 'down'}">${p.pnl >= 0 ? '+' : ''}${fmtMoney(p.pnl, a.currency, 2)}（${p.pnl >= 0 ? '+' : ''}${fmtPct(p.pct)}）</span>${hint(p.pnl, true)}`}</b></div>`;
-    $('#sell-cash-label').textContent = `將收到嘅 ${fmtMoney(p.proceeds, a.currency, 2)} 加入活期：`;
+    $('#sell-cash-label').textContent = `將收到的 ${fmtMoney(p.proceeds, a.currency, 2)} 加入活期：`;
 }
 
 function openSell(asset) {
@@ -97,9 +97,9 @@ sellForm.addEventListener('submit', async (e) => {
     const fee = nOrNull(f.fee.value) ?? 0;
     const holding = Number(a.shares);
     const err = (m) => { $('#sell-error').textContent = m; $('#sell-error').hidden = false; };
-    if (!(shares > 0)) return err('要填賣出股數');
+    if (!(shares > 0)) return err('請填寫賣出股數');
     if (shares > holding + 1e-9) return err(`最多只可以賣 ${holding} 股`);
-    if (!(price > 0)) return err('要填賣出價');
+    if (!(price > 0)) return err('請填寫賣出價');
 
     const trade = {
         symbol: a.symbol, name: a.name, institution: a.institution, currency: a.currency,
@@ -122,7 +122,7 @@ sellForm.addEventListener('submit', async (e) => {
         sellDialog.close();
         toast(remaining <= 0 ? '已賣出全部' : `已賣出 ${shares} 股`);
     } catch (e2) {
-        err(`「${step}」出錯：${e2.message || e2}${step !== '儲存賣出記錄' ? '（賣出記錄已經儲咗，請檢查持倉）' : ''}`);
+        err(`「${step}」出錯：${e2.message || e2}${step !== '儲存賣出記錄' ? '（賣出記錄已儲存，請檢查持倉）' : ''}`);
     } finally {
         await reload();
     }
@@ -146,7 +146,7 @@ tradeForm.addEventListener('submit', async (e) => {
     const f = tradeForm.elements;
     const t = state.trades.find((x) => x.id === f.id.value);
     if (!(Number(f.shares.value) > 0) || !(Number(f.sell_price.value) > 0)) {
-        $('#trade-error').textContent = '股數同賣出價要大過 0';
+        $('#trade-error').textContent = '股數及賣出價必須大於 0';
         $('#trade-error').hidden = false;
         return;
     }
@@ -170,7 +170,7 @@ tradeForm.addEventListener('submit', async (e) => {
 $('#trade-delete').addEventListener('click', async () => {
     const id = tradeForm.elements.id.value;
     const t = state.trades.find((x) => x.id === id);
-    if (!t || !confirm(`確定刪除「${t.name}」呢筆賣出記錄？持倉股數唔會自動加返。`)) return;
+    if (!t || !confirm(`確定刪除「${t.name}」這筆賣出記錄？持倉股數不會自動加回。`)) return;
     try {
         await store.deleteTrade(id);
         tradeDialog.close();

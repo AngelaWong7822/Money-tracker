@@ -27,8 +27,8 @@ function buildReminders(assets, settings, sent, now) {
         items.push({
             kind: 'fd',
             ref,
-            title: `${a.institution ? a.institution + ' ' : ''}${a.name}：${days === 1 ? '聽日' : `${days} 日後`}到期`,
-            detail: `本金 ${amount}${interest !== null ? `，預計利息 ${calc.fmtMoney(interest, a.currency, 2)}` : ''}。到期之後會自動續期定轉返活期，要睇你開定期嗰陣點揀，記得去銀行 app 確認。`,
+            title: `${a.institution ? a.institution + ' ' : ''}${a.name}：${days === 1 ? '明天' : `${days} 日後`}到期`,
+            detail: `本金 ${amount}${interest !== null ? `，預計利息 ${calc.fmtMoney(interest, a.currency, 2)}` : ''}。到期後會自動續期或轉回活期，視乎你開立定期時的選擇，請到銀行 app 確認。`,
         });
     }
 
@@ -38,7 +38,7 @@ function buildReminders(assets, settings, sent, now) {
         const ref = `rule:${r.key}`;
         const last = sent.filter((x) => x.ref === ref).map((x) => new Date(x.sent_at)).sort((x, y) => y - x)[0];
         if (last && now - last < RULE_REPEAT_DAYS * 86400000) continue;
-        items.push({ kind: 'rule', ref, title: `規則唔符合：${r.title}`, detail: r.detail });
+        items.push({ kind: 'rule', ref, title: `規則不符合：${r.title}`, detail: r.detail });
     }
     return items;
 }

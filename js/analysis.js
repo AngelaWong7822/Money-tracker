@@ -43,20 +43,20 @@ function renderAnalysis() {
     const [latest, ...older] = analysis.reports;
 
     const action = `<div class="card">
-        <div class="card-head"><h2>Gemini 分析</h2><span class="small muted">今日仲可以分析 ${left} 次</span></div>
-        <p class="small muted" style="margin:0 0 0.8rem">用你而家嘅資料，寫一份白話分析。每個禮拜一朝早亦會自動出一份同 email 俾你。</p>
+        <div class="card-head"><h2>Gemini 分析</h2><span class="small muted">今日尚可分析 ${left} 次</span></div>
+        <p class="small muted" style="margin:0 0 0.8rem">根據你現時的資料，撰寫一份淺白的分析。每星期一早上亦會自動產生一份，並以 email 寄給你。</p>
         <button id="analyze-btn" class="btn btn-primary btn-block" ${analysis.busy || left === 0 ? 'disabled' : ''}>
-            ${analysis.busy ? 'Gemini 分析緊…（大約 10 至 20 秒）' : left === 0 ? '今日次數用晒，聽日再試' : '而家分析一次'}</button>
+            ${analysis.busy ? 'Gemini 正在分析…（約 10 至 20 秒）' : left === 0 ? '今日次數已用完，請明天再試' : '立即分析'}</button>
         ${analysis.error ? `<p class="error">${esc(analysis.error)}</p>` : ''}
-        <p class="hint" style="margin:0.6rem 0 0">只會傳計好嘅數字俾 Gemini（金額、百分比、到期日、股票代號），唔會傳戶口號碼或者你個名。</p>
+        <p class="hint" style="margin:0.6rem 0 0">只會將計算好的數字傳送給 Gemini（金額、百分比、到期日、股票代號），不會傳送戶口號碼或你的姓名。</p>
     </div>`;
 
     if (!analysis.loaded) {
-        el.innerHTML = action + '<p class="section-note">載入緊…</p>';
+        el.innerHTML = action + '<p class="section-note">載入中…</p>';
         return;
     }
     if (!latest) {
-        el.innerHTML = action + emptyCard('仲未有報告', '撳上面「而家分析一次」，或者等星期一嘅自動報告。');
+        el.innerHTML = action + emptyCard('尚未有報告', '按上方「立即分析」，或等待星期一的自動報告。');
         return;
     }
 
@@ -65,9 +65,9 @@ function renderAnalysis() {
             <div class="report-meta">${reportMeta(latest)}</div>
             <p class="report-headline">${esc(latest.content?.headline || '')}</p>
             ${reportBody(latest)}
-            <p class="hint" style="margin:1rem 0 0">由 Gemini 根據你嘅資料自動寫成，只係分析，唔係投資建議。AI 有機會講錯，重要數字請對返資產頁。</p>
+            <p class="hint" style="margin:1rem 0 0">由 Gemini 根據你的資料自動撰寫，僅供分析，並非投資建議。AI 或會出錯，重要數字請與資產頁核對。</p>
         </div>
-        ${older.length ? `<p class="section-note">之前嘅報告</p>` + older.map((r) => `
+        ${older.length ? `<p class="section-note">過往報告</p>` + older.map((r) => `
             <details class="card report report-old">
                 <summary><div class="report-meta">${reportMeta(r)}</div><div class="item-name">${esc(r.content?.headline || '')}</div></summary>
                 ${reportBody(r)}
@@ -97,7 +97,7 @@ document.addEventListener('click', async (e) => {
         const facts = buildFacts(state.assets, state.settings, prev, state.trades);
         const { report } = await store.analyzeNow(facts);
         analysis.reports = [report, ...analysis.reports.filter((r) => r.id !== report.id)];
-        toast('分析好咗');
+        toast('分析完成');
     } catch (err) {
         analysis.error = '分析失敗：' + (err.message || err);
     } finally {

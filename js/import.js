@@ -12,7 +12,7 @@ async function compressImage(file) {
         const img = await new Promise((resolve, reject) => {
             const i = new Image();
             i.onload = () => resolve(i);
-            i.onerror = () => reject(new Error(`讀唔到「${file.name}」，試下用 JPG 或 PNG`));
+            i.onerror = () => reject(new Error(`無法讀取「${file.name}」，請改用 JPG 或 PNG`));
             i.src = url;
         });
         const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
@@ -53,7 +53,7 @@ function renderImportCard(item, idx) {
     const amountLabel = { fd: '本金', credit: '欠款', mpf: '結餘', insurance: '現金價值' }[t] || '金額';
     return `<div class="import-card ${item.checked ? '' : 'unchecked'}" data-card="${idx}">
         <div class="import-card-head">
-            <label class="check"><input type="checkbox" data-idx="${idx}" data-field="checked" ${item.checked ? 'checked' : ''}> 匯入呢筆</label>
+            <label class="check"><input type="checkbox" data-idx="${idx}" data-field="checked" ${item.checked ? 'checked' : ''}> 匯入此筆</label>
             ${item.duplicate ? `<span class="badge badge-soon">可能重複：已有「${esc(item.duplicate)}」</span>` : ''}
         </div>
         <div class="row">
@@ -80,10 +80,10 @@ function renderImportList() {
     const n = importItems.length;
     const dup = importItems.filter((i) => i.duplicate).length;
     $('#import-summary').textContent = n
-        ? `搵到 ${n} 筆${dup ? `，其中 ${dup} 筆可能已經有咗（預設唔剔）` : ''}。`
+        ? `找到 ${n} 筆${dup ? `，其中 ${dup} 筆可能已存在（預設不選取）` : ''}。`
         : '';
     $('#import-save').hidden = !n;
-    if (!n) showImportError('喺截圖入面搵唔到資產。試下用定期詳情頁或者股票持倉頁嘅截圖。');
+    if (!n) showImportError('截圖中找不到資產。請改用定期詳情頁或股票持倉頁的截圖。');
 }
 
 function showImportError(msg) {
@@ -111,12 +111,12 @@ $('#import-list').addEventListener('change', (e) => {
 });
 
 function validateItem(item) {
-    if (!item.name) return '要填名稱';
-    if (item.type === 'stock') return item.shares ? null : '要填股數';
-    if (item.amount === null || item.amount === undefined || item.amount === '') return '要填金額';
+    if (!item.name) return '請填寫名稱';
+    if (item.type === 'stock') return item.shares ? null : '請填寫股數';
+    if (item.amount === null || item.amount === undefined || item.amount === '') return '請填寫金額';
     if (item.type === 'fd') {
-        if (!item.maturity_date) return '要填到期日';
-        if (item.start_date && item.maturity_date <= item.start_date) return '到期日要喺開始日之後';
+        if (!item.maturity_date) return '請填寫到期日';
+        if (item.start_date && item.maturity_date <= item.start_date) return '到期日必須在開始日之後';
     }
     return null;
 }
@@ -125,7 +125,7 @@ $('#import-save').addEventListener('click', async () => {
     $('#import-error').hidden = true;
     document.querySelectorAll('[data-card-error]').forEach((p) => { p.hidden = true; });
     const chosen = importItems.map((item, idx) => ({ item, idx })).filter(({ item }) => item.checked);
-    if (!chosen.length) { showImportError('未剔任何一筆'); return; }
+    if (!chosen.length) { showImportError('未選取任何一筆'); return; }
 
     let bad = false;
     for (const { item, idx } of chosen) {
@@ -137,7 +137,7 @@ $('#import-save').addEventListener('click', async () => {
             bad = true;
         }
     }
-    if (bad) { showImportError('有啲欄未填好，睇返紅色字'); return; }
+    if (bad) { showImportError('部分欄位未填妥，請查看紅色字'); return; }
 
     const btn = $('#import-save');
     btn.disabled = true;
@@ -154,7 +154,7 @@ $('#import-save').addEventListener('click', async () => {
         importDialog.close();
         toast(`已匯入 ${saved} 筆`);
     } catch (err) {
-        showImportError(`儲存咗 ${saved} 筆之後出錯：${err.message || err}`);
+        showImportError(`儲存 ${saved} 筆後出錯：${err.message || err}`);
     } finally {
         btn.disabled = false;
         await reload();
@@ -180,7 +180,7 @@ importFile.addEventListener('change', async () => {
     importDialog.showModal();
 
     try {
-        if (files.length > MAX_IMPORT_IMAGES) throw new Error(`一次最多揀 ${MAX_IMPORT_IMAGES} 張`);
+        if (files.length > MAX_IMPORT_IMAGES) throw new Error(`每次最多選擇 ${MAX_IMPORT_IMAGES} 張`);
         const images = await Promise.all(files.map(compressImage));
         const found = await store.extractFromImages(images);
         importItems = found.map((a) => {
