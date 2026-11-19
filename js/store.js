@@ -2,6 +2,9 @@
 
 const SETTINGS_FIELDS = ['usd_hkd', 'min_cash', 'max_stock_pct', 'max_usd_pct', 'fd_remind_days', 'email_enabled'];
 
+const TRADE_FIELDS = ['symbol', 'name', 'institution', 'currency', 'shares', 'cost_price', 'sell_price', 'fee', 'sold_on', 'notes'];
+const pickTrade = (t) => Object.fromEntries(TRADE_FIELDS.map((k) => [k, t[k] === '' || t[k] === undefined ? null : t[k]]));
+
 const ASSET_FIELDS = [
     'type', 'name', 'institution', 'currency', 'amount',
     'rate', 'start_date', 'maturity_date',
@@ -73,6 +76,27 @@ function createCloudStore() {
             const row = { user_id: user.id, updated_at: new Date().toISOString() };
             for (const k of SETTINGS_FIELDS) if (k in settings) row[k] = settings[k];
             const { error } = await client.from('invest_settings').upsert(row);
+            if (error) throw error;
+        },
+        /** 賣出記錄；未行 migration_005 就當冇記錄，唔好整壞成個 app */
+        async listTrades() {
+            const { data, error } = await client.from('invest_trades').select('*').order('sold_on', { ascending: false });
+            if (error) {
+                if (/invest_trades|schema cache|PGRST205/.test(error.message + (error.code || ''))) return [];
+                throw error;
+            }
+            return data;
+        },
+        async saveTrade(trade) {
+            const row = { ...pickTrade(trade), fee: Number(trade.fee) || 0, updated_at: new Date().toISOString() };
+            const query = trade.id
+                ? client.from('invest_trades').update(row).eq('id', trade.id)
+                : client.from('invest_trades').insert(row);
+            const { error } = await query;
+            if (error) throw error;
+        },
+        async deleteTrade(id) {
+            const { error } = await client.from('invest_trades').delete().eq('id', id);
             if (error) throw error;
         },
         async listReports() {
@@ -160,6 +184,9 @@ function createDemoStore() {
     ].map((a, i) => ({ id: `demo-${i}`, ...cleanAsset(a), dividend_per_share: a.dividend_per_share ?? null, company_country: a.company_country ?? null, created_at: new Date(Date.now() + i).toISOString() }));
     let settings = { usd_hkd: 7.8, usd_hkd_updated_at: new Date().toISOString(), min_cash: 50000, max_stock_pct: 10, max_usd_pct: 30, fd_remind_days: 7, email_enabled: true };
     const user = { email: 'demo@example.com' };
+    let trades = [
+        { id: 'demo-t-0', symbol: 'TSLA', name: '特斯拉', institution: 'ZA Bank', currency: 'USD', shares: 1, cost_price: 250, sell_price: 310, fee: 1, sold_on: iso(-40) },
+    ];
     const reports = [{
         id: 'demo-r-0', created_at: new Date(Date.now() - 3 * 86400000).toISOString(), source: 'weekly', model: 'demo',
         content: {
@@ -190,6 +217,13 @@ function createDemoStore() {
         async getSettings() { return { ...settings }; },
         async saveSettings(s) { settings = { ...settings, ...s }; },
         async listReports() { return reports.map((r) => ({ ...r })); },
+        async listTrades() { return trades.map((t) => ({ ...t })).sort((a, b) => (a.sold_on < b.sold_on ? 1 : -1)); },
+        async saveTrade(t) {
+            const row = { ...pickTrade(t), fee: Number(t.fee) || 0 };
+            if (t.id) trades = trades.map((x) => (x.id === t.id ? { ...x, ...row } : x));
+            else trades.push({ id: `demo-t-${Date.now()}`, ...row });
+        },
+        async deleteTrade(id) { trades = trades.filter((t) => t.id !== id); },
         async chat(facts, messages) {
             await new Promise((r) => setTimeout(r, 800));
             const q = messages[messages.length - 1].text;

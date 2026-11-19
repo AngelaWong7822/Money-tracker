@@ -62,7 +62,9 @@ async function main() {
         const settings = settingsRows.find((s) => s.user_id === userId) ?? { usd_hkd: 7.8 };
         const { data: prevRows } = await db.from('invest_snapshots').select('*')
             .eq('user_id', userId).lte('snap_date', isoDaysAgo(6)).order('snap_date', { ascending: false }).limit(1);
-        const facts = calc.buildFacts(assets.filter((a) => a.user_id === userId), settings, prevRows?.[0] ?? null);
+        // 未行 migration_005 都唔好整壞每週報告
+        const { data: trades } = await db.from('invest_trades').select('*').eq('user_id', userId);
+        const facts = calc.buildFacts(assets.filter((a) => a.user_id === userId), settings, prevRows?.[0] ?? null, trades ?? []);
         // repo 係 public，Actions log 人人睇到：唔寫任何金額
         console.log(`數字已計好（${facts.change_since_last_week ? '有' : '未有'}上週快照可以比較）`);
         if (DRY) continue;

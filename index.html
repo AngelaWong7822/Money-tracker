@@ -130,6 +130,7 @@
             <p id="asset-error" class="error" hidden></p>
             <div class="sheet-actions">
                 <button type="button" id="asset-delete" class="btn btn-danger" hidden>刪除</button>
+                <button type="button" id="asset-sell" class="btn" hidden>賣出</button>
                 <span class="spacer"></span>
                 <button type="button" id="asset-cancel" class="btn">取消</button>
                 <button type="submit" class="btn btn-primary">儲存</button>
@@ -157,6 +158,58 @@
             <button type="button" id="import-cancel" class="btn">取消</button>
             <button type="button" id="import-save" class="btn btn-primary" hidden>儲存已剔選</button>
         </div>
+    </dialog>
+
+    <!-- 賣出股票 -->
+    <dialog id="sell-dialog" class="sheet">
+        <form id="sell-form" method="dialog">
+            <h2 id="sell-title">賣出</h2>
+            <p class="small muted" id="sell-holding"></p>
+            <label>賣出日期<input name="sold_on" type="date" required></label>
+            <div class="row">
+                <label>股數<input name="shares" type="number" step="any" min="0" required inputmode="decimal"></label>
+                <button type="button" id="sell-all" class="btn sell-all">全部</button>
+            </div>
+            <div class="row">
+                <label>賣出價（每股）<input name="sell_price" type="number" step="any" min="0" required inputmode="decimal"></label>
+                <label>手續費<input name="fee" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></label>
+            </div>
+            <p class="hint">賣出價預設係錢錢簿最近攞到嘅現價，記得改做 ZA 實際成交價。</p>
+            <div class="sell-preview" id="sell-preview"></div>
+            <label class="check" id="sell-cash-wrap" hidden><input type="checkbox" name="add_cash"> <span id="sell-cash-label"></span></label>
+            <select name="cash_id" id="sell-cash-select" hidden></select>
+            <p id="sell-error" class="error" hidden></p>
+            <div class="sheet-actions">
+                <span class="spacer"></span>
+                <button type="button" id="sell-cancel" class="btn">取消</button>
+                <button type="submit" class="btn btn-primary">確認賣出</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- 改賣出記錄 -->
+    <dialog id="trade-dialog" class="sheet">
+        <form id="trade-form" method="dialog">
+            <h2 id="trade-title">賣出記錄</h2>
+            <input type="hidden" name="id">
+            <label>賣出日期<input name="sold_on" type="date" required></label>
+            <div class="row">
+                <label>股數<input name="shares" type="number" step="any" min="0" required inputmode="decimal"></label>
+                <label>手續費<input name="fee" type="number" step="any" min="0" inputmode="decimal"></label>
+            </div>
+            <div class="row">
+                <label>買入價（每股）<input name="cost_price" type="number" step="any" min="0" inputmode="decimal"></label>
+                <label>賣出價（每股）<input name="sell_price" type="number" step="any" min="0" required inputmode="decimal"></label>
+            </div>
+            <p class="hint">改或者刪除呢筆記錄，唔會自動改返持倉股數。</p>
+            <p id="trade-error" class="error" hidden></p>
+            <div class="sheet-actions">
+                <button type="button" id="trade-delete" class="btn btn-danger">刪除</button>
+                <span class="spacer"></span>
+                <button type="button" id="trade-cancel" class="btn">取消</button>
+                <button type="submit" class="btn btn-primary">儲存</button>
+            </div>
+        </form>
     </dialog>
 
     <!-- 設定 -->
@@ -196,5 +249,6 @@
     <script src="js/import.js"></script>
     <script src="js/analysis.js"></script>
     <script src="js/chat.js"></script>
+    <script src="js/trades.js"></script>
 </body>
 </html>

@@ -77,7 +77,7 @@ async function chatSend(text) {
     renderChatLog();
     try {
         if (chat.prev === undefined) chat.prev = await store.getPrevSnapshot().catch(() => null);
-        const facts = buildFacts(state.assets, state.settings, chat.prev);
+        const facts = buildFacts(state.assets, state.settings, chat.prev, state.trades);
         // 只傳正常對話（唔傳錯誤訊息）
         const history = chat.messages.filter((m) => !m.error).map(({ role, text: t }) => ({ role, text: t }));
         const reply = await store.chat(facts, history);

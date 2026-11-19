@@ -174,6 +174,28 @@ function dividendTotals(assets, settings) {
     return { net, counted, untaxed, missing };
 }
 
+/** 賣出記錄：已實現盈虧（原幣）＝（賣出價 − 買入價）× 股數 − 手續費 */
+function tradePnL(t) {
+    const shares = num(t.shares) ?? 0, sell = num(t.sell_price) ?? 0, cost = num(t.cost_price), fee = num(t.fee) ?? 0;
+    const proceeds = sell * shares - fee;
+    if (cost === null || cost <= 0) return { proceeds, pnl: null, pct: null };
+    const pnl = (sell - cost) * shares - fee;
+    return { proceeds, pnl, pct: (pnl / (cost * shares)) * 100 };
+}
+
+/** 某一年已實現盈虧合計（港幣）；冇買入價嘅唔計 */
+function realizedSummary(trades, settings, year) {
+    let total = 0, count = 0, skipped = 0;
+    for (const t of trades || []) {
+        if (String(t.sold_on).slice(0, 4) !== String(year)) continue;
+        const { pnl } = tradePnL(t);
+        if (pnl === null) { skipped++; continue; }
+        total += toHKD(pnl, t.currency, settings);
+        count++;
+    }
+    return { total, count, skipped };
+}
+
 /** 每日快照（港幣，四捨五入） */
 function snapshotOf(assets, settings) {
     const s = summarize(assets, settings);
@@ -191,7 +213,7 @@ function snapshotOf(assets, settings) {
  * 傳俾 Gemini 分析嘅數字：全部計好、換晒港幣，唔包戶口號碼同人名
  * prev = 大約一個禮拜前嘅快照（可以係 null）
  */
-function buildFacts(assets, settings, prev) {
+function buildFacts(assets, settings, prev, trades = []) {
     const s = summarize(assets, settings);
     const total = s.assetsTotal || 0;
     const pct = (v) => (total ? Math.round((v / total) * 1000) / 10 : 0);
@@ -280,10 +302,27 @@ function buildFacts(assets, settings, prev) {
         })(),
         rules: checkRules(assets, settings).map(({ title, ok, detail }) => ({ title, ok, detail })),
         change_since_last_week: change,
+        realized_gains_this_year: (() => {
+            const year = today.slice(0, 4);
+            const sum = realizedSummary(trades, settings, year);
+            return {
+                year,
+                total_hkd: r(sum.total),
+                note: '已實現盈虧 = 已經賣出、真正落袋嘅賺蝕；香港冇資本增值稅',
+                trades: (trades || []).filter((t) => String(t.sold_on).startsWith(year)).slice(0, 20).map((t) => {
+                    const p = tradePnL(t);
+                    return {
+                        symbol: t.symbol, name: t.name, sold_on: t.sold_on, shares: num(t.shares),
+                        pnl_hkd: p.pnl === null ? null : r(toHKD(p.pnl, t.currency, settings)),
+                        pnl_pct: p.pct === null ? null : Math.round(p.pct * 10) / 10,
+                    };
+                }),
+            };
+        })(),
     };
 }
 
 // 俾 Node（每日排程 script）用；瀏覽器冇 module，唔會行呢段
 if (typeof module !== 'undefined') {
-    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules, snapshotOf, buildFacts, dividendInfo, dividendTotals };
+    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules, snapshotOf, buildFacts, dividendInfo, dividendTotals, tradePnL, realizedSummary };
 }

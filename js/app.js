@@ -3,7 +3,7 @@
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const state = { assets: [], settings: { usd_hkd: 7.8 }, tab: 'overview' };
+const state = { assets: [], trades: [], settings: { usd_hkd: 7.8 }, tab: 'overview' };
 
 /* ── 共用小工具 ── */
 function toast(msg) {
@@ -229,7 +229,7 @@ function renderAssets() {
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, a.currency === 'USD' ? 2 : 0)}</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}</div>
                 </li>`).join('')}</ul>
         </div>`;
-    }).join('');
+    }).join('') + (typeof renderTradesCard === 'function' ? renderTradesCard() : '');
 }
 
 /* ── 定期時間表 ── */
@@ -280,9 +280,10 @@ function render() {
 
 async function reload() {
     try {
-        const [assets, settings] = await Promise.all([store.listAssets(), store.getSettings()]);
+        const [assets, settings, trades] = await Promise.all([store.listAssets(), store.getSettings(), store.listTrades()]);
         state.assets = assets;
         state.settings = settings;
+        state.trades = trades;
         render();
     } catch (err) {
         console.error(err);
@@ -331,6 +332,7 @@ function openAssetDialog(asset) {
     $('#asset-error').hidden = true;
     $('#asset-dialog-title').textContent = asset ? '編輯資產' : '新增資產';
     $('#asset-delete').hidden = !asset;
+    $('#asset-sell').hidden = !(asset && asset.type === 'stock');
     $('#import-entry').hidden = !!asset;
     form.elements.id.value = asset?.id ?? '';
     if (asset) {

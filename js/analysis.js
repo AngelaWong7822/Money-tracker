@@ -94,7 +94,7 @@ document.addEventListener('click', async (e) => {
     renderAnalysis();
     try {
         const prev = await store.getPrevSnapshot();
-        const facts = buildFacts(state.assets, state.settings, prev);
+        const facts = buildFacts(state.assets, state.settings, prev, state.trades);
         const { report } = await store.analyzeNow(facts);
         analysis.reports = [report, ...analysis.reports.filter((r) => r.id !== report.id)];
         toast('分析好咗');
