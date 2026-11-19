@@ -42,6 +42,8 @@ async function updatePrices(db, assets) {
     const token = env('FINNHUB_API_KEY', !DRY);
     if (!token) { console.log('冇 FINNHUB_API_KEY，跳過股價'); return; }
     const symbols = [...new Set(assets.filter((a) => a.type === 'stock' && a.symbol).map((a) => a.symbol.toUpperCase()))];
+    // repo 係 public，Actions log 人人睇到：只寫數量，唔寫股票代號同價錢
+    let updated = 0, failed = 0;
     for (const sym of symbols) {
         try {
             const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}`, {
@@ -49,19 +51,21 @@ async function updatePrices(db, assets) {
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const q = await res.json();
-            if (!(q.c > 0)) { console.warn(`${sym}：Finnhub 冇報價（代號啱唔啱？）`); continue; }
-            console.log(`${sym} = ${q.c}`);
+            if (!(q.c > 0)) { failed++; continue; }
             if (!DRY) {
                 const { error } = await db.from('invest_assets')
                     .update({ last_price: q.c, price_updated_at: new Date().toISOString() })
                     .eq('type', 'stock').eq('symbol', sym).eq('deleted', false);
                 if (error) throw error;
             }
+            updated++;
         } catch (err) {
-            console.warn(`${sym} 更新失敗：`, err.message);
+            failed++;
+            console.warn('有一隻股票更新失敗：', err.message);
         }
         await sleep(1100); // 免費版每分鐘 60 次
     }
+    console.log(`股價：更新咗 ${updated} 隻${failed ? `，${failed} 隻攞唔到報價（去 app 檢查代號）` : ''}`);
 }
 
 function emailHtml(items) {
@@ -103,7 +107,6 @@ async function main() {
 
         // 每日快照（俾每週分析同上週比較）
         const snap = calc.snapshotOf(assets.filter((a) => a.user_id === userId), settings);
-        console.log(`快照：淨資產 ${calc.fmtMoney(snap.net)}`);
         if (!DRY) {
             const { error: snapErr } = await db.from('invest_snapshots')
                 .upsert({ user_id: userId, snap_date: calc.todayISO(), ...snap }, { onConflict: 'user_id,snap_date' });
@@ -113,7 +116,8 @@ async function main() {
         const sent = sentRows.filter((r) => r.user_id === userId);
         const items = buildReminders(assets.filter((a) => a.user_id === userId), settings, sent, new Date());
         if (!items.length) { console.log('今日冇嘢要提'); continue; }
-        console.log('要提：\n' + items.map((i) => `- ${i.title}：${i.detail}`).join('\n'));
+        // repo 係 public：內容只會喺 email 入面，log 淨係寫數量
+        console.log(`要提 ${items.length} 項`);
         if (settings.email_enabled === false) { console.log('已熄 email 提醒，唔寄'); continue; }
         if (DRY) continue;
 

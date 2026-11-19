@@ -63,8 +63,9 @@ async function main() {
         const { data: prevRows } = await db.from('invest_snapshots').select('*')
             .eq('user_id', userId).lte('snap_date', isoDaysAgo(6)).order('snap_date', { ascending: false }).limit(1);
         const facts = calc.buildFacts(assets.filter((a) => a.user_id === userId), settings, prevRows?.[0] ?? null);
-        console.log(`淨資產 ${calc.fmtMoney(facts.net_hkd)}；上週比較：${facts.change_since_last_week ? calc.fmtMoney(facts.change_since_last_week.net_change_hkd) : '未有'}`);
-        if (DRY) { console.log(JSON.stringify(facts, null, 1)); continue; }
+        // repo 係 public，Actions log 人人睇到：唔寫任何金額
+        console.log(`數字已計好（${facts.change_since_last_week ? '有' : '未有'}上週快照可以比較）`);
+        if (DRY) continue;
 
         const res = await fetch(`${url}/functions/v1/invest-analyze`, {
             method: 'POST',
@@ -73,7 +74,7 @@ async function main() {
         });
         const out = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(`invest-analyze 出錯（${res.status}）：${out.error || ''}`);
-        console.log('報告：', out.report.content.headline);
+        console.log('報告已產生');
 
         if (settings.email_enabled === false) { console.log('已熄 email，唔寄'); continue; }
         const transport = nodemailer.createTransport({
