@@ -336,3 +336,16 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 }
 .rule-list .ok .rule-mark { background: var(--accent-soft); color: var(--up); }
 .rule-list .bad .rule-mark { background: var(--warn-bg); color: var(--warn-ink); }
+
+/* ── 分析報告 ── */
+.report-meta { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+.report-headline { font-size: 1.05rem; font-weight: 600; margin: 0.2rem 0 0.4rem; line-height: 1.45; }
+.report-h { font-size: 0.88rem; font-weight: 600; margin: 1rem 0 0.25rem; color: var(--accent-ink); }
+.report-p { margin: 0; line-height: 1.7; font-size: 0.88rem; }
+.watch-list { margin: 0.35rem 0 0; padding-left: 1.1rem; }
+.watch-list li { margin: 0.15rem 0; }
+.report-old summary { cursor: pointer; list-style: none; }
+.report-old summary::-webkit-details-marker { display: none; }
+.report-old[open] summary { margin-bottom: 0.4rem; }
+.btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+.bottom-nav button { flex-basis: 6rem; }

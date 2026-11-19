@@ -75,6 +75,38 @@ function createCloudStore() {
             const { error } = await client.from('invest_settings').upsert(row);
             if (error) throw error;
         },
+        async listReports() {
+            const { data, error } = await client.from('invest_reports')
+                .select('id, created_at, source, content, model')
+                .order('created_at', { ascending: false })
+                .limit(20);
+            if (error) throw error;
+            return data;
+        },
+        /** 大約一個禮拜前（6 日或以前）最近嗰個快照 */
+        async getPrevSnapshot() {
+            const d = new Date();
+            d.setDate(d.getDate() - 6);
+            const cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const { data, error } = await client.from('invest_snapshots').select('*')
+                .lte('snap_date', cutoff).order('snap_date', { ascending: false }).limit(1);
+            if (error) throw error;
+            return data[0] ?? null;
+        },
+        async analyzeNow(facts) {
+            const { data, error } = await client.functions.invoke('invest-analyze', { body: { facts } });
+            if (error) {
+                let msg = error.message;
+                let fromFunction = false;
+                try {
+                    const body = await error.context.json();
+                    if (body?.error) { msg = body.error; fromFunction = true; }
+                } catch { /* 冇 JSON 就用原本訊息 */ }
+                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '連唔到 invest-analyze function，檢查下網絡或者 function 有冇部署';
+                throw new Error(msg);
+            }
+            return data;
+        },
         /** 影相匯入：images = [{ mimeType, data(base64) }] → [asset, ...] */
         async extractFromImages(images) {
             const { data, error } = await client.functions.invoke('invest-extract', {
@@ -112,6 +144,17 @@ function createDemoStore() {
     ].map((a, i) => ({ id: `demo-${i}`, ...cleanAsset(a), created_at: new Date(Date.now() + i).toISOString() }));
     let settings = { usd_hkd: 7.8, usd_hkd_updated_at: new Date().toISOString(), min_cash: 50000, max_stock_pct: 10, max_usd_pct: 30, fd_remind_days: 7, email_enabled: true };
     const user = { email: 'demo@example.com' };
+    const reports = [{
+        id: 'demo-r-0', created_at: new Date(Date.now() - 3 * 86400000).toISOString(), source: 'weekly', model: 'demo',
+        content: {
+            headline: '（示範）淨資產大約 $32 萬，定期佔一半',
+            sections: [
+                { title: '本週總結', body: '呢個係第一份報告，下個禮拜開始會同上週比較。' },
+                { title: '資產分佈', body: '定期佔 52%，強積金佔 37%，股票佔 3%。' },
+            ],
+            watch_points: [],
+        },
+    }];
 
     return {
         demo: true,
@@ -130,6 +173,29 @@ function createDemoStore() {
         async deleteAsset(id) { assets = assets.filter((a) => a.id !== id); },
         async getSettings() { return { ...settings }; },
         async saveSettings(s) { settings = { ...settings, ...s }; },
+        async listReports() { return reports.map((r) => ({ ...r })); },
+        async getPrevSnapshot() {
+            return { snap_date: iso(-7), net: 300000, by_type: { fd: 169000, cash: 20000, stock: 8000, mpf: 118000 } };
+        },
+        async analyzeNow(facts) {
+            const today = reports.filter((r) => r.source === 'manual' && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+            if (today >= 3) throw new Error('今日已經分析咗 3 次，聽日再試啦');
+            await new Promise((r) => setTimeout(r, 1200));
+            const report = {
+                id: `demo-r-${Date.now()}`, created_at: new Date().toISOString(), source: 'manual', model: 'demo',
+                content: {
+                    headline: `淨資產 ${fmtMoney(facts.net_hkd)}，比上週多咗 ${fmtMoney(facts.change_since_last_week?.net_change_hkd ?? 0)}`,
+                    sections: [
+                        { title: '本週總結', body: '（示範）你嘅淨資產比上個禮拜多咗，主要因為活期多咗錢。' },
+                        { title: '資產分佈', body: '（示範）一半以上嘅錢放喺定期，股票佔好細部分。' },
+                        { title: '定期', body: '（示範）未來 90 日有兩筆定期到期。' },
+                    ],
+                    watch_points: ['（示範）ZA Bank 3個月定期 10 日後到期'],
+                },
+            };
+            reports.unshift(report);
+            return { report, remaining: 2 - today };
+        },
         // 示範：假裝 Gemini 讀到兩筆，其中一筆同現有嘅重複
         async extractFromImages() {
             await new Promise((r) => setTimeout(r, 1200));

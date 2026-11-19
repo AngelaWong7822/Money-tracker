@@ -250,9 +250,11 @@ async function reload() {
 /* ── 分頁 ── */
 function showTab(tab) {
     state.tab = tab;
-    for (const t of ['overview', 'assets', 'fd']) $(`#tab-${t}`).hidden = t !== tab;
+    for (const t of ['overview', 'assets', 'fd', 'analysis']) $(`#tab-${t}`).hidden = t !== tab;
     document.querySelectorAll('.bottom-nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
-    $('#page-title').textContent = { overview: '我的資產', assets: '資產明細', fd: '定期' }[tab];
+    $('#page-title').textContent = { overview: '我的資產', assets: '資產明細', fd: '定期', analysis: '分析' }[tab];
+    if (tab === 'analysis' && typeof loadAnalysis === 'function') loadAnalysis();
+    $('#add-btn').hidden = tab === 'analysis';
     window.scrollTo(0, 0);
 }
 

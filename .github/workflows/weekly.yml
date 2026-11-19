@@ -1,0 +1,33 @@
+name: 每週分析報告
+
+on:
+  schedule:
+    # 逢星期一香港時間 08:00（UTC 00:00）；放喺每日更新之後，用到新鮮股價
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只試行（只印數字，唔叫 Gemini、唔寄 email）'
+        type: boolean
+        default: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/weekly.js
+        env:
+          TZ: Asia/Hong_Kong
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}

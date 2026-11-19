@@ -100,6 +100,16 @@ async function main() {
     const users = [...new Set(assets.map((a) => a.user_id))];
     for (const userId of users) {
         const settings = settingsRows.find((s) => s.user_id === userId) ?? { usd_hkd: 7.8, fd_remind_days: 7, email_enabled: true };
+
+        // 每日快照（俾每週分析同上週比較）
+        const snap = calc.snapshotOf(assets.filter((a) => a.user_id === userId), settings);
+        console.log(`快照：淨資產 ${calc.fmtMoney(snap.net)}`);
+        if (!DRY) {
+            const { error: snapErr } = await db.from('invest_snapshots')
+                .upsert({ user_id: userId, snap_date: calc.todayISO(), ...snap }, { onConflict: 'user_id,snap_date' });
+            if (snapErr) console.warn('寫快照失敗：', snapErr.message);
+        }
+
         const sent = sentRows.filter((r) => r.user_id === userId);
         const items = buildReminders(assets.filter((a) => a.user_id === userId), settings, sent, new Date());
         if (!items.length) { console.log('今日冇嘢要提'); continue; }

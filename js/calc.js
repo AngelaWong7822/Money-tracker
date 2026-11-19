@@ -141,7 +141,107 @@ function checkRules(assets, settings) {
     return results;
 }
 
+/** 每日快照（港幣，四捨五入） */
+function snapshotOf(assets, settings) {
+    const s = summarize(assets, settings);
+    const round = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Math.round(v)]));
+    return {
+        net: Math.round(s.net),
+        assets_total: Math.round(s.assetsTotal),
+        liabilities: Math.round(s.liabilities),
+        by_type: round(s.byType),
+        by_currency: round(s.byCurrency),
+    };
+}
+
+/**
+ * 傳俾 Gemini 分析嘅數字：全部計好、換晒港幣，唔包戶口號碼同人名
+ * prev = 大約一個禮拜前嘅快照（可以係 null）
+ */
+function buildFacts(assets, settings, prev) {
+    const s = summarize(assets, settings);
+    const total = s.assetsTotal || 0;
+    const pct = (v) => (total ? Math.round((v / total) * 1000) / 10 : 0);
+    const r = (v) => Math.round(v);
+    const r2 = (v) => Math.round(v * 100) / 100;
+    const today = todayISO();
+
+    const byType = {};
+    for (const t of Object.keys(s.byType)) byType[TYPES[t].label] = { hkd: r(s.byType[t]), pct: pct(s.byType[t]) };
+
+    const fds = assets.filter((a) => a.type === 'fd').map((a) => {
+        const i = fdInterest(a);
+        return {
+            bank: a.institution || null,
+            name: a.name,
+            currency: a.currency,
+            principal_hkd: r(valueHKD(a, settings)),
+            annual_rate_pct: num(a.rate),
+            start_date: a.start_date,
+            maturity_date: a.maturity_date,
+            days_left: fdDaysLeft(a),
+            expected_interest_hkd: i === null ? null : r2(toHKD(i, a.currency, settings)),
+        };
+    }).sort((x, y) => (x.days_left ?? 99999) - (y.days_left ?? 99999));
+
+    const soon = fds.filter((f) => f.days_left !== null && f.days_left >= 0 && f.days_left <= 90);
+    const byMonth = {};
+    for (const f of soon) {
+        const m = f.maturity_date.slice(0, 7);
+        byMonth[m] = (byMonth[m] || 0) + f.principal_hkd;
+    }
+
+    const stocks = assets.filter((a) => a.type === 'stock').map((a) => {
+        const pl = stockPnL(a);
+        const v = valueHKD(a, settings);
+        return {
+            symbol: a.symbol,
+            name: a.name,
+            currency: a.currency,
+            shares: num(a.shares),
+            value_hkd: r(v),
+            pct_of_total: pct(v),
+            pnl_pct: pl ? Math.round(pl.pct * 10) / 10 : null,
+            pnl_hkd: pl ? r(toHKD(pl.pnl, a.currency, settings)) : null,
+        };
+    }).sort((x, y) => y.value_hkd - x.value_hkd);
+
+    let change = null;
+    if (prev) {
+        const types = new Set([...Object.keys(prev.by_type || {}), ...Object.keys(s.byType)]);
+        const byTypeChange = {};
+        for (const t of types) {
+            const diff = r((s.byType[t] || 0) - Number(prev.by_type?.[t] || 0));
+            if (diff !== 0) byTypeChange[TYPES[t]?.label ?? t] = diff;
+        }
+        change = {
+            compared_with_date: prev.snap_date,
+            days: daysBetween(prev.snap_date, today),
+            net_before_hkd: r(Number(prev.net)),
+            net_change_hkd: r(s.net - Number(prev.net)),
+            by_type_change_hkd: byTypeChange,
+        };
+    }
+
+    return {
+        as_of: today,
+        usd_hkd: Number(settings.usd_hkd || 7.8),
+        net_hkd: r(s.net),
+        assets_hkd: r(total),
+        credit_card_debt_hkd: r(s.liabilities),
+        cash_available_hkd: r(s.byType.cash || 0),
+        by_type: byType,
+        currency_pct: { HKD: pct(s.byCurrency.HKD || 0), USD: pct(s.byCurrency.USD || 0) },
+        fixed_deposits: fds,
+        fd_maturing_next_90_days: { total_hkd: r(soon.reduce((x, f) => x + f.principal_hkd, 0)), by_month_hkd: byMonth },
+        stocks,
+        us_dividend_withholding_tax_pct: stocks.some((x) => x.currency === 'USD') ? 30 : null,
+        rules: checkRules(assets, settings).map(({ title, ok, detail }) => ({ title, ok, detail })),
+        change_since_last_week: change,
+    };
+}
+
 // 俾 Node（每日排程 script）用；瀏覽器冇 module，唔會行呢段
 if (typeof module !== 'undefined') {
-    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules };
+    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules, snapshotOf, buildFacts };
 }

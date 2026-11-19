@@ -44,6 +44,15 @@
 
 規則檢查邏輯喺 `js/calc.js` 嘅 `checkRules`，網頁同排程共用。
 
+## Gemini 分析報告（第 3 期）
+
+- 每日排程順手寫 `invest_snapshots`（每人每日一行），俾報告同上週比較
+- 數字由 `js/calc.js` 嘅 `buildFacts` 計好（港幣、百分比、到期日、代號；冇戶口號碼同人名）
+- Edge Function `invest-analyze`：收 facts → Gemini → 儲 `invest_reports`
+  - App「而家分析一次」：登入 token，每日最多 3 次（香港時間計）
+  - `.github/workflows/weekly.yml` 逢星期一 08:00 HKT 行 `scripts/weekly.js`：用 `sb_secret_` key 叫 function，再 email 報告
+- 部署：SQL Editor 行 `supabase/migration_003_phase3.sql`；dashboard 新增 function `invest-analyze`（貼 `supabase/functions/invest-analyze/index.ts`，熄 Verify JWT），唔使新 secret
+
 ## 本機測試
 
 ```
