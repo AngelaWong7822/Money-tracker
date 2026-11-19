@@ -138,10 +138,11 @@ function createDemoStore() {
         { type: 'fd', name: '3個月定期', institution: 'ZA Bank', currency: 'HKD', amount: 50000, rate: 3.2, start_date: iso(-80), maturity_date: iso(10) },
         { type: 'fd', name: '6個月定期', institution: 'Mox Bank', currency: 'HKD', amount: 80000, rate: 3.0, start_date: iso(-60), maturity_date: iso(122) },
         { type: 'fd', name: '美元定期', institution: 'Mox Bank', currency: 'USD', amount: 5000, rate: 4.0, start_date: iso(-20), maturity_date: iso(70) },
-        { type: 'stock', name: 'P&G', institution: 'ZA Bank', currency: 'USD', symbol: 'PG', shares: 7, cost_price: 150, last_price: 160, price_updated_at: new Date().toISOString() },
+        { type: 'stock', name: 'P&G', institution: 'ZA Bank', currency: 'USD', symbol: 'PG', shares: 7, cost_price: 150, last_price: 160, price_updated_at: new Date().toISOString(), dividend_per_share: 4.2276, company_country: 'US' },
+        { type: 'stock', name: '諾華製藥', institution: 'ZA Bank', currency: 'USD', symbol: 'NVS', shares: 2, cost_price: 140, last_price: 155, price_updated_at: new Date().toISOString(), dividend_per_share: 3.9, company_country: 'CH' },
         { type: 'mpf', name: '強積金', institution: '示範', currency: 'HKD', amount: 120000 },
         { type: 'credit', name: '信用卡', institution: '示範', currency: 'HKD', amount: 3500 },
-    ].map((a, i) => ({ id: `demo-${i}`, ...cleanAsset(a), created_at: new Date(Date.now() + i).toISOString() }));
+    ].map((a, i) => ({ id: `demo-${i}`, ...cleanAsset(a), dividend_per_share: a.dividend_per_share ?? null, company_country: a.company_country ?? null, created_at: new Date(Date.now() + i).toISOString() }));
     let settings = { usd_hkd: 7.8, usd_hkd_updated_at: new Date().toISOString(), min_cash: 50000, max_stock_pct: 10, max_usd_pct: 30, fd_remind_days: 7, email_enabled: true };
     const user = { email: 'demo@example.com' };
     const reports = [{

@@ -53,6 +53,12 @@
   - `.github/workflows/weekly.yml` 逢星期一 08:00 HKT 行 `scripts/weekly.js`：用 `sb_secret_` key 叫 function，再 email 報告
 - 部署：SQL Editor 行 `supabase/migration_003_phase3.sql`；dashboard 新增 function `invest-analyze`（貼 `supabase/functions/invest-analyze/index.ts`，熄 Verify JWT），唔使新 secret
 
+## 股息估算
+
+- `supabase/migration_004_dividends.sql`：`invest_assets` 加 `dividend_per_share`、`company_country`、`dividend_updated_at`
+- 每日排程用 Finnhub `stock/metric`（按最近派息推算全年，冇就用過去 12 個月）同 `stock/profile2`（公司所在地）
+- 美國公司按 30% 預扣稅計；非美國公司只顯示稅前（稅率唔同，唔估）
+
 ## 本機測試
 
 ```

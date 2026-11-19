@@ -42,6 +42,24 @@ function fmtShortDateTime(iso) {
     return `${d.getDate()}/${d.getMonth() + 1} ${h12}:${String(d.getMinutes()).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`;
 }
 
+/* ── 股息 ── */
+function dividendLine(a, settings) {
+    const d = dividendInfo(a);
+    if (!d) return '';
+    if (d.none) return '<div class="item-sub">冇派息</div>';
+    const net = d.taxPct === null
+        ? '（非美國公司，未計稅）'
+        : `（扣 ${d.taxPct}% 稅後 ≈ ${fmtMoney(d.net, a.currency, 2)}${a.currency === 'USD' ? ` / ${hkdHint(d.net, a.currency, settings).replace('≈ ', '')}` : ''}）`;
+    return `<div class="item-sub">每年股息約 ${fmtMoney(d.gross, a.currency, 2)}${net}</div>`;
+}
+
+function dividendExplain(t) {
+    if (!t || !t.counted) return t && t.missing ? '股息資料下次每日更新會攞埋。' : '';
+    let text = `按而家嘅派息水平，你一年大約收 ${fmtMoney(t.net)} 股息（已扣美國公司 30% 稅）`;
+    if (t.untaxed) text += `；其中 ${t.untaxed} 隻係非美國公司，稅率唔同，呢度用咗稅前數`;
+    return text + '。股息唔保證，公司可以加、減或者停派。';
+}
+
 /* ── 規則檢查 ── */
 function renderRulesCard() {
     const rules = checkRules(state.assets, state.settings);
@@ -91,6 +109,7 @@ function renderOverview() {
         allocText += '。';
     }
     const stocks = assets.filter((a) => a.type === 'stock');
+    const divTotals = stocks.length ? dividendTotals(assets, settings) : null;
     if (stocks.length === 1) allocText += `股票部分得 1 隻（${esc(stocks[0].name)}），嗰部分嘅升跌完全跟呢間公司。`;
 
     const hkdPct = s.assetsTotal ? (s.byCurrency.HKD / s.assetsTotal) * 100 : 0;
@@ -119,6 +138,9 @@ function renderOverview() {
         <div class="stat-row">
             <div class="stat"><div class="stat-label">隨時可用（活期）</div><div class="stat-value">${fmtMoney(cashNow)}</div></div>
             <div class="stat"><div class="stat-label">定期預計利息</div><div class="stat-value">${fmtMoney(totalInterest)}</div></div>
+            ${divTotals && divTotals.counted ? `<div class="stat stat-wide"><div class="stat-label">每年股息估算（扣稅後）</div>
+                <div class="stat-value">≈ ${fmtMoney(divTotals.net)}</div>
+                ${divTotals.untaxed ? `<div class="hkd-hint">有 ${divTotals.untaxed} 隻非美國公司未計稅</div>` : ''}</div>` : ''}
         </div>
 
         ${renderRulesCard()}
@@ -147,7 +169,8 @@ function renderOverview() {
                 const pl = stockPnL(a);
                 return `<li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.name)}</div>
-                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股${a.price_updated_at ? ` · 股價 ${fmtShortDateTime(a.price_updated_at)}` : ''}</div></div>
+                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股${a.price_updated_at ? ` · 股價 ${fmtShortDateTime(a.price_updated_at)}` : ''}</div>
+                        ${dividendLine(a, settings)}</div>
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, 2)}</div>
                         ${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}
                         ${pl ? `<div class="small ${pl.pnl >= 0 ? 'up' : 'down'}">${pl.pnl >= 0 ? '+' : ''}${fmtMoney(pl.pnl, a.currency, 2)}（${pl.pnl >= 0 ? '+' : ''}${fmtPct(pl.pct)}）</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(pl.pnl, a.currency, settings, true)}</div>` : ''}` : '<div class="small muted">未有現價</div>'}</div>
@@ -157,7 +180,7 @@ function renderOverview() {
                 const pl = stockPnL(a);
                 if (!pl) return '';
                 return `${esc(a.name)} 而家${pl.pnl >= 0 ? '高' : '低'}過你買入價 ${fmtPct(Math.abs(pl.pct))}，賬面${pl.pnl >= 0 ? '賺' : '蝕'}緊 ${fmtMoney(Math.abs(pl.pnl), a.currency, 2)}${a.currency === 'USD' ? `（${hkdHint(Math.abs(pl.pnl), a.currency, settings).replace('≈ ', '約 ')}）` : ''}。`;
-            }).join('') + '未賣出之前，盈虧只係賬面數字。香港居民收美股股息會先被扣 30% 稅。')}
+            }).join('') + '未賣出之前，盈虧只係賬面數字。' + dividendExplain(divTotals))}
         </div>` : ''}
     `;
 }

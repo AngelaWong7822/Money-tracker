@@ -141,6 +141,39 @@ function checkRules(assets, settings) {
     return results;
 }
 
+/** 美國公司股息，香港居民預扣 30%；其他地方稅率唔同，唔估 */
+const US_DIVIDEND_TAX_PCT = 30;
+
+/**
+ * 股票每年股息估算（原幣）
+ * 回傳 null = 未有資料；{ none: true } = 冇派息；
+ * 否則 { gross, net, taxPct }，taxPct = null 代表非美國公司、未計稅（net = gross）
+ */
+function dividendInfo(a) {
+    if (a.type !== 'stock') return null;
+    const dps = num(a.dividend_per_share);
+    if (dps === null) return null;
+    if (dps <= 0) return { none: true };
+    const gross = dps * (num(a.shares) ?? 0);
+    const taxPct = a.company_country === 'US' ? US_DIVIDEND_TAX_PCT : null;
+    return { gross, net: taxPct === null ? gross : gross * (1 - taxPct / 100), taxPct };
+}
+
+/** 全部股票一年股息合計（港幣） */
+function dividendTotals(assets, settings) {
+    let net = 0, untaxed = 0, counted = 0, missing = 0;
+    for (const a of assets) {
+        if (a.type !== 'stock') continue;
+        const d = dividendInfo(a);
+        if (!d) { missing++; continue; }
+        if (d.none) continue;
+        counted++;
+        net += toHKD(d.net, a.currency, settings);
+        if (d.taxPct === null) untaxed++;
+    }
+    return { net, counted, untaxed, missing };
+}
+
 /** 每日快照（港幣，四捨五入） */
 function snapshotOf(assets, settings) {
     const s = summarize(assets, settings);
@@ -203,6 +236,10 @@ function buildFacts(assets, settings, prev) {
             pct_of_total: pct(v),
             pnl_pct: pl ? Math.round(pl.pct * 10) / 10 : null,
             pnl_hkd: pl ? r(toHKD(pl.pnl, a.currency, settings)) : null,
+            company_country: a.company_country || null,
+            annual_dividend_before_tax_hkd: dividendInfo(a) ? r(toHKD(dividendInfo(a).gross ?? 0, a.currency, settings)) : null,
+            dividend_tax_pct: dividendInfo(a)?.taxPct ?? null,
+            annual_dividend_after_tax_hkd: dividendInfo(a) ? (dividendInfo(a).taxPct === null ? null : r(toHKD(dividendInfo(a).net ?? 0, a.currency, settings))) : null,
         };
     }).sort((x, y) => y.value_hkd - x.value_hkd);
 
@@ -235,7 +272,12 @@ function buildFacts(assets, settings, prev) {
         fixed_deposits: fds,
         fd_maturing_next_90_days: { total_hkd: r(soon.reduce((x, f) => x + f.principal_hkd, 0)), by_month_hkd: byMonth },
         stocks,
-        us_dividend_withholding_tax_pct: stocks.some((x) => x.currency === 'USD') ? 30 : null,
+        us_dividend_withholding_tax_pct: stocks.some((x) => x.company_country === 'US') ? US_DIVIDEND_TAX_PCT : null,
+        dividends_note: '股息係按而家派息水平估算全年，唔保證；非美國公司（company_country 唔係 US）稅率唔同，只有稅前數',
+        annual_dividends_hkd: (() => {
+            const t = dividendTotals(assets, settings);
+            return { estimated_total: r(t.net), stocks_paying: t.counted, non_us_untaxed: t.untaxed, stocks_without_data: t.missing };
+        })(),
         rules: checkRules(assets, settings).map(({ title, ok, detail }) => ({ title, ok, detail })),
         change_since_last_week: change,
     };
@@ -243,5 +285,5 @@ function buildFacts(assets, settings, prev) {
 
 // 俾 Node（每日排程 script）用；瀏覽器冇 module，唔會行呢段
 if (typeof module !== 'undefined') {
-    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules, snapshotOf, buildFacts };
+    module.exports = { TYPES, num, toHKD, nativeValue, valueHKD, daysBetween, todayISO, fdInterest, fdDaysLeft, stockPnL, summarize, fmtMoney, fmtPct, hkdHint, checkRules, snapshotOf, buildFacts, dividendInfo, dividendTotals };
 }

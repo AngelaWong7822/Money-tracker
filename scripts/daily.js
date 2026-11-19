@@ -43,18 +43,37 @@ async function updatePrices(db, assets) {
     if (!token) { console.log('冇 FINNHUB_API_KEY，跳過股價'); return; }
     const symbols = [...new Set(assets.filter((a) => a.type === 'stock' && a.symbol).map((a) => a.symbol.toUpperCase()))];
     // repo 係 public，Actions log 人人睇到：只寫數量，唔寫股票代號同價錢
-    let updated = 0, failed = 0;
+    let updated = 0, failed = 0, divUpdated = 0;
+    const finnhub = async (path) => {
+        const res = await fetch(`https://finnhub.io/api/v1/${path}`, { headers: { 'X-Finnhub-Token': token } });
+        await sleep(1100); // 免費版每分鐘 60 次
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    };
     for (const sym of symbols) {
+        const s = encodeURIComponent(sym);
         try {
-            const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}`, {
-                headers: { 'X-Finnhub-Token': token },
-            });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const q = await res.json();
+            const q = await finnhub(`quote?symbol=${s}`);
             if (!(q.c > 0)) { failed++; continue; }
+            const row = { last_price: q.c, price_updated_at: new Date().toISOString() };
+
+            // 股息同公司所在地：攞唔到就保留舊數，唔影響股價更新
+            try {
+                const [metric, profile] = [await finnhub(`stock/metric?symbol=${s}&metric=all`), await finnhub(`stock/profile2?symbol=${s}`)];
+                const dps = dividendPerShare(metric?.metric, q.c);
+                if (dps !== null) {
+                    row.dividend_per_share = dps;
+                    row.company_country = profile?.country || null;
+                    row.dividend_updated_at = new Date().toISOString();
+                    divUpdated++;
+                }
+            } catch (err) {
+                console.warn('有一隻股票攞唔到股息資料：', err.message);
+            }
+
             if (!DRY) {
                 const { error } = await db.from('invest_assets')
-                    .update({ last_price: q.c, price_updated_at: new Date().toISOString() })
+                    .update(row)
                     .eq('type', 'stock').eq('symbol', sym).eq('deleted', false);
                 if (error) throw error;
             }
@@ -63,9 +82,26 @@ async function updatePrices(db, assets) {
             failed++;
             console.warn('有一隻股票更新失敗：', err.message);
         }
-        await sleep(1100); // 免費版每分鐘 60 次
     }
-    console.log(`股價：更新咗 ${updated} 隻${failed ? `，${failed} 隻攞唔到報價（去 app 檢查代號）` : ''}`);
+    console.log(`股價：更新咗 ${updated} 隻${failed ? `，${failed} 隻攞唔到報價（去 app 檢查代號）` : ''}；股息資料：${divUpdated} 隻`);
+}
+
+/**
+ * 每股每年股息（原幣）。優先用「按最近一次派息推算全年」嘅股息率，冇就用過去 12 個月實際派咗幾多。
+ * 回傳 0 = 冇派息；null = 資料唔齊（保留舊數）
+ */
+function dividendPerShare(m, price) {
+    if (!m) return null;
+    const pos = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null);
+    const indicatedYield = pos(m.dividendYieldIndicatedAnnual);
+    if (indicatedYield && price > 0) return Math.round(price * indicatedYield) / 100;
+    const ttm = pos(m.dividendPerShareTTM) ?? pos(m.dividendPerShareAnnual);
+    if (ttm) return Math.round(ttm * 10000) / 10000;
+    const yieldTtm = pos(m.currentDividendYieldTTM);
+    if (yieldTtm && price > 0) return Math.round(price * yieldTtm) / 100;
+    // 有齊股息欄位但全部係 0 / 冇 = 冇派息
+    const known = ['dividendYieldIndicatedAnnual', 'dividendPerShareTTM', 'dividendPerShareAnnual', 'currentDividendYieldTTM'].some((k) => k in m);
+    return known ? 0 : null;
 }
 
 function emailHtml(items) {
