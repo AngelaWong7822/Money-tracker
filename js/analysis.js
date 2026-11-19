@@ -38,7 +38,7 @@ function reportMeta(r) {
 }
 
 function renderAnalysis() {
-    const el = $('#tab-analysis');
+    const el = $('#analysis-reports');
     const left = manualLeftToday();
     const [latest, ...older] = analysis.reports;
 

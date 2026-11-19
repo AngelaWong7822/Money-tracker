@@ -93,6 +93,21 @@ function createCloudStore() {
             if (error) throw error;
             return data[0] ?? null;
         },
+        /** 問 AI：messages = [{ role: 'user' | 'model', text }] → 回覆文字 */
+        async chat(facts, messages) {
+            const { data, error } = await client.functions.invoke('invest-chat', { body: { facts, messages } });
+            if (error) {
+                let msg = error.message;
+                let fromFunction = false;
+                try {
+                    const body = await error.context.json();
+                    if (body?.error) { msg = body.error; fromFunction = true; }
+                } catch { /* 冇 JSON 就用原本訊息 */ }
+                if (!fromFunction && error.name === 'FunctionsFetchError') msg = '連唔到 invest-chat function，檢查下網絡或者 function 有冇部署';
+                throw new Error(msg);
+            }
+            return data.reply;
+        },
         async analyzeNow(facts) {
             const { data, error } = await client.functions.invoke('invest-analyze', { body: { facts } });
             if (error) {
@@ -175,6 +190,11 @@ function createDemoStore() {
         async getSettings() { return { ...settings }; },
         async saveSettings(s) { settings = { ...settings, ...s }; },
         async listReports() { return reports.map((r) => ({ ...r })); },
+        async chat(facts, messages) {
+            await new Promise((r) => setTimeout(r, 800));
+            const q = messages[messages.length - 1].text;
+            return `（示範回覆）你問：「${q}」\n\n根據錢錢簿，你嘅淨資產係 **${fmtMoney(facts.net_hkd)}**，其中：\n- 定期佔 ${facts.by_type['定期']?.pct ?? 0}%\n- 股票佔 ${facts.by_type['股票']?.pct ?? 0}%\n\n以上只係示範，真版會由 Gemini 回答。`;
+        },
         async getPrevSnapshot() {
             return { snap_date: iso(-7), net: 300000, by_type: { fd: 169000, cash: 20000, stock: 8000, mpf: 118000 } };
         },

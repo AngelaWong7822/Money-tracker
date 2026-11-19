@@ -1,8 +1,8 @@
 /* 錢錢簿 service worker：網絡優先，冇網先用快取（資產數字永遠由雲端攞，唔會快取） */
-const CACHE = 'money-shell-v11';
+const CACHE = 'money-shell-v12';
 const SHELL = [
     './', './index.html', './css/app.css', './manifest.webmanifest',
-    './js/config.js', './js/store.js', './js/calc.js', './js/app.js', './js/import.js', './js/analysis.js',
+    './js/config.js', './js/store.js', './js/calc.js', './js/app.js', './js/import.js', './js/analysis.js', './js/chat.js',
     './vendor/supabase/supabase.js',
     './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png',
 ];
