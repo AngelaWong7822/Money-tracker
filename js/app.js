@@ -35,9 +35,11 @@ function emptyCard(title, body) {
     return `<div class="card empty"><p class="empty-title">${title}</p><p class="muted small">${body}</p></div>`;
 }
 
-function fmtShortDate(iso) {
+function fmtShortDateTime(iso) {
     const d = new Date(iso);
-    return `${d.getMonth() + 1}/${d.getDate()}`;
+    const h = d.getHours();
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${d.getDate()}/${d.getMonth() + 1} ${h12}:${String(d.getMinutes()).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`;
 }
 
 /* ── 規則檢查 ── */
@@ -145,7 +147,7 @@ function renderOverview() {
                 const pl = stockPnL(a);
                 return `<li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.name)}</div>
-                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股${a.price_updated_at ? ` · 股價 ${fmtShortDate(a.price_updated_at)}` : ''}</div></div>
+                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股${a.price_updated_at ? ` · 股價 ${fmtShortDateTime(a.price_updated_at)}` : ''}</div></div>
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, 2)}</div>
                         ${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}
                         ${pl ? `<div class="small ${pl.pnl >= 0 ? 'up' : 'down'}">${pl.pnl >= 0 ? '+' : ''}${fmtMoney(pl.pnl, a.currency, 2)}（${pl.pnl >= 0 ? '+' : ''}${fmtPct(pl.pct)}）</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(pl.pnl, a.currency, settings, true)}</div>` : ''}` : '<div class="small muted">未有現價</div>'}</div>
