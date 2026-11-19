@@ -51,8 +51,11 @@ function fmtPrice(v, currency) {
 
 function priceLine(a) {
     const parts = [];
-    if (a.last_price !== null && a.last_price !== undefined) parts.push(`現價 ${fmtPrice(a.last_price, a.currency)}`);
-    if (a.cost_price !== null && a.cost_price !== undefined) parts.push(`買入價 ${fmtPrice(a.cost_price, a.currency)}`);
+    const has = (v) => v !== null && v !== undefined && Number(v) > 0;
+    if (has(a.last_price)) parts.push(`<span class="price-now">現價 ${fmtPrice(a.last_price, a.currency)}</span>`);
+    parts.push(has(a.cost_price)
+        ? `<span class="price-cost">買入價 ${fmtPrice(a.cost_price, a.currency)}</span>`
+        : '<span class="price-missing">未有買入價，撳入去補</span>');
     return parts.length ? `<div class="item-sub num">${parts.join(' · ')}</div>` : '';
 }
 
@@ -189,7 +192,7 @@ function renderOverview() {
                         ${dividendLine(a, settings)}</div>
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, 2)}</div>
                         ${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}
-                        ${pl ? `<div class="small ${pl.pnl >= 0 ? 'up' : 'down'}">${pl.pnl >= 0 ? '+' : ''}${fmtMoney(pl.pnl, a.currency, 2)}（${pl.pnl >= 0 ? '+' : ''}${fmtPct(pl.pct)}）</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(pl.pnl, a.currency, settings, true)}</div>` : ''}` : '<div class="small muted">未有現價</div>'}</div>
+                        ${pl ? `<div class="small ${pl.pnl >= 0 ? 'up' : 'down'}">${pl.pnl >= 0 ? '+' : ''}${fmtMoney(pl.pnl, a.currency, 2)}（${pl.pnl >= 0 ? '+' : ''}${fmtPct(pl.pct)}）</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(pl.pnl, a.currency, settings, true)}</div>` : ''}` : `<div class="small muted">${Number(a.cost_price) > 0 ? '未有現價' : '未有買入價'}</div>`}</div>
                 </li>`;
             }).join('')}</ul>
             ${explain(stocks.map((a) => {

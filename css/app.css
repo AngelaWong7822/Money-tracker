@@ -350,3 +350,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .btn[disabled] { opacity: 0.6; cursor: not-allowed; }
 .bottom-nav button { flex-basis: 6rem; }
 .stat-wide { grid-column: 1 / -1; }
+
+/* 現價 / 買入價：用唔同顏色分（紅綠留俾盈虧） */
+.price-now { color: var(--accent); font-weight: 500; }
+.price-cost { color: var(--text-muted); }
+.price-missing { color: var(--warn-ink); }
