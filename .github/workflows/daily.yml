@@ -1,0 +1,36 @@
+name: 每日更新同提醒
+
+on:
+  schedule:
+    # 香港時間 07:00 同 09:00（GitHub 免費排程成日遲，行兩次保險；提醒有記錄，唔會重複寄）
+    - cron: '0 23 * * *'
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只試行（唔寫入、唔寄 email）'
+        type: boolean
+        default: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # supabase-js 嘅 realtime 要 Node 22（原生 WebSocket）
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/daily.js
+        env:
+          TZ: Asia/Hong_Kong
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}

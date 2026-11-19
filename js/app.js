@@ -24,7 +24,7 @@ function daysLeftBadge(days) {
     if (days === null) return '';
     if (days < 0) return '<span class="badge badge-done">已到期</span>';
     if (days === 0) return '<span class="badge badge-soon">今日到期</span>';
-    if (days <= 7) return `<span class="badge badge-soon">⏰ 仲有 ${days} 日</span>`;
+    if (days <= (state.settings.fd_remind_days ?? 7)) return `<span class="badge badge-soon">仲有 ${days} 日</span>`;
     return `<span class="badge">仲有 ${days} 日</span>`;
 }
 
@@ -33,6 +33,28 @@ const explain = (html) => `<div class="explain"><svg class="ic"><use href="#i-in
 
 function emptyCard(title, body) {
     return `<div class="card empty"><p class="empty-title">${title}</p><p class="muted small">${body}</p></div>`;
+}
+
+function fmtShortDate(iso) {
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/* ── 規則檢查 ── */
+function renderRulesCard() {
+    const rules = checkRules(state.assets, state.settings);
+    if (!rules.length) {
+        return `<div class="card rules-empty"><div class="card-head"><h2>我嘅規則</h2><button class="link-btn" data-open-settings>設定規則</button></div>
+            <p class="small muted" style="margin:0">你可以定啲簡單規則，例如「活期最少要有 $50,000」。唔符合嘅話會提你。</p></div>`;
+    }
+    const bad = rules.filter((r) => !r.ok).length;
+    return `<div class="card">
+        <div class="card-head"><h2>我嘅規則</h2><span class="small ${bad ? 'warn-ink' : 'up'}">${bad ? `${bad} 條唔符合` : '全部符合'}</span></div>
+        <ul class="rule-list">${rules.map((r) => `<li class="${r.ok ? 'ok' : 'bad'}">
+            <span class="rule-mark" aria-hidden="true">${r.ok ? '✓' : '!'}</span>
+            <div><div class="item-name">${esc(r.title)}</div><div class="item-sub">${esc(r.detail)}</div></div>
+        </li>`).join('')}</ul>
+    </div>`;
 }
 
 /* ── 總覽 ── */
@@ -97,6 +119,8 @@ function renderOverview() {
             <div class="stat"><div class="stat-label">定期預計利息</div><div class="stat-value">${fmtMoney(totalInterest)}</div></div>
         </div>
 
+        ${renderRulesCard()}
+
         <div class="card">
             <div class="card-head"><h2>資產分佈</h2><span class="small muted num">港幣 ${fmtPct(hkdPct, 0)} · 美元 ${fmtPct(usdPct, 0)}</span></div>
             <div class="alloc-bar" role="img" aria-label="資產分佈">${bar}</div>
@@ -121,7 +145,7 @@ function renderOverview() {
                 const pl = stockPnL(a);
                 return `<li data-edit="${esc(a.id)}">
                     <div><div class="item-name">${esc(a.name)}</div>
-                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股</div></div>
+                        <div class="item-sub">${esc(a.symbol || '')} · ${Number(a.shares || 0)} 股${a.price_updated_at ? ` · 股價 ${fmtShortDate(a.price_updated_at)}` : ''}</div></div>
                     <div class="item-right"><div class="main">${fmtMoney(nativeValue(a), a.currency, 2)}</div>
                         ${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(nativeValue(a), a.currency, settings)}</div>` : ''}
                         ${pl ? `<div class="small ${pl.pnl >= 0 ? 'up' : 'down'}">${pl.pnl >= 0 ? '+' : ''}${fmtMoney(pl.pnl, a.currency, 2)}（${pl.pnl >= 0 ? '+' : ''}${fmtPct(pl.pct)}）</div>${a.currency === 'USD' ? `<div class="hkd-hint">${hkdHint(pl.pnl, a.currency, settings, true)}</div>` : ''}` : '<div class="small muted">未有現價</div>'}</div>
@@ -332,6 +356,7 @@ $('#asset-delete').addEventListener('click', async () => {
 
 $('#add-btn').addEventListener('click', () => openAssetDialog(null));
 document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-open-settings]')) { $('#settings-btn').click(); return; }
     const go = e.target.closest('[data-goto]');
     if (go) { showTab(go.dataset.goto); return; }
     const item = e.target.closest('[data-edit]');
@@ -343,15 +368,31 @@ document.addEventListener('click', (e) => {
 /* ── 設定 ── */
 const settingsDialog = $('#settings-dialog');
 $('#settings-btn').addEventListener('click', () => {
-    $('#settings-form').elements.usd_hkd.value = state.settings.usd_hkd;
+    const f = $('#settings-form').elements;
+    const st = state.settings;
+    f.usd_hkd.value = st.usd_hkd;
+    for (const k of ['min_cash', 'max_stock_pct', 'max_usd_pct']) f[k].value = st[k] ?? '';
+    f.fd_remind_days.value = st.fd_remind_days ?? 7;
+    f.email_enabled.checked = st.email_enabled !== false;
+    $('#fx-hint').textContent = st.usd_hkd_updated_at
+        ? `每朝自動更新，上次更新：${new Date(st.usd_hkd_updated_at).toLocaleString('zh-HK', { dateStyle: 'short', timeStyle: 'short' })}。自己改咗都會俾下次自動更新蓋過。`
+        : '每朝自動更新（第一次更新之前用你填嘅數）。港元同美元掛鈎，一般喺 7.75 至 7.85 之間。';
     settingsDialog.showModal();
 });
 $('#settings-cancel').addEventListener('click', () => settingsDialog.close());
 $('#settings-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const v = Number(e.target.elements.usd_hkd.value);
+    const f = e.target.elements;
+    const optional = (el) => (el.value === '' ? null : Number(el.value));
     try {
-        await store.saveSettings({ usd_hkd: v });
+        await store.saveSettings({
+            usd_hkd: Number(f.usd_hkd.value),
+            min_cash: optional(f.min_cash),
+            max_stock_pct: optional(f.max_stock_pct),
+            max_usd_pct: optional(f.max_usd_pct),
+            fd_remind_days: Number(f.fd_remind_days.value) || 7,
+            email_enabled: f.email_enabled.checked,
+        });
         settingsDialog.close();
         toast('已儲存');
         await reload();

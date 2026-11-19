@@ -160,8 +160,21 @@
     <dialog id="settings-dialog" class="sheet">
         <form id="settings-form" method="dialog">
             <h2>設定</h2>
+            <p class="settings-section">匯率</p>
             <label>美元兌港元匯率<input name="usd_hkd" type="number" step="0.0001" min="0" required inputmode="decimal"></label>
-            <p class="hint">用嚟將美元資產換算做港幣。港元同美元掛鈎，一般喺 7.75 至 7.85 之間。</p>
+            <p class="hint" id="fx-hint">每朝自動更新。港元同美元掛鈎，一般喺 7.75 至 7.85 之間。</p>
+
+            <p class="settings-section">我嘅規則</p>
+            <p class="hint">留空 = 唔用嗰條規則。唔符合嘅話，總覽會顯示 ⚠，亦會 email 提你。</p>
+            <label>活期最少要有（港幣）<input name="min_cash" type="number" step="1" min="0" inputmode="numeric" placeholder="例如 50000"></label>
+            <div class="row">
+                <label>單一股票最多佔 %<input name="max_stock_pct" type="number" step="0.1" min="0" max="100" inputmode="decimal" placeholder="例如 10"></label>
+                <label>美元最多佔 %<input name="max_usd_pct" type="number" step="0.1" min="0" max="100" inputmode="decimal" placeholder="例如 30"></label>
+            </div>
+
+            <p class="settings-section">提醒</p>
+            <label>定期到期前幾多日提我<input name="fd_remind_days" type="number" step="1" min="1" max="60" required inputmode="numeric"></label>
+            <label class="check"><input type="checkbox" name="email_enabled"> 有嘢要提就寄 email 俾我</label>
             <div class="sheet-actions">
                 <span class="spacer"></span>
                 <button type="button" id="settings-cancel" class="btn">取消</button>

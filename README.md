@@ -28,6 +28,22 @@
 
 注意：Gemini 免費版可能會用上傳內容改善 Google 產品，上傳前最好裁走戶口號碼。
 
+## 每日更新同提醒（第 2 期）
+
+`.github/workflows/daily.yml` 每朝香港時間 07:00 同 09:00 行 `scripts/daily.js`：
+1. USD/HKD 匯率（open.er-api.com，唔使 key）
+2. 股價（Finnhub `/quote`）
+3. 定期到期（前 N 日 + 前 1 日）同自訂規則（唔符合時提，之後每 7 日再提）→ Gmail
+   已寄記錄喺 `invest_notifications`，所以行兩次都唔會重複寄。
+
+設定：
+1. Supabase SQL Editor 行 `supabase/migration_002_phase2.sql`（要喺推網頁之前行）
+2. GitHub repo secrets：`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`FINNHUB_API_KEY`、
+   `GMAIL_USER`、`GMAIL_APP_PASSWORD`、`RECIPIENT_EMAIL`
+3. Actions → 每日更新同提醒 → Run workflow（剔「只試行」先試）
+
+規則檢查邏輯喺 `js/calc.js` 嘅 `checkRules`，網頁同排程共用。
+
 ## 本機測試
 
 ```
